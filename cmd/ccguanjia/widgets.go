@@ -55,10 +55,12 @@ func card(c *ui.Context, p palette, icon *ui.SVG, color ui.Color, title, extra s
 		body()
 	})
 	if onOpen != nil {
+		pose := ui.Pose{}
 		if box.Hovered() {
-			box.Background(p.cardHover)
+			box.Background(p.cardHover).Shadow(0, 14, 30, -14, p.lift)
+			pose.Y = -2
 		}
-		box.Transition(quick)
+		box.Transition(quick).AnimatePose(pose, ui.Snappy)
 	}
 	return box
 }
@@ -550,4 +552,95 @@ func splitNumber(s string) (string, string) {
 		i--
 	}
 	return s[:i], s[i:]
+}
+
+// profileColor is the color of a profile's avatar: the profiles take the
+// colors in turn, in the order the sidebar lists them, so that the first
+// six differ.
+func (a *app) profileColor(p palette, name string) ui.Color {
+	colors := []ui.Color{p.blue, p.purple, p.teal, p.orange, p.green, p.red}
+	for i, pr := range a.profiles {
+		if pr.Name == name {
+			return colors[i%len(colors)]
+		}
+	}
+	return p.gray
+}
+
+// initial is the first letter of a name, as an avatar shows it.
+func initial(name string) string {
+	for _, r := range name {
+		return strings.ToUpper(string(r))
+	}
+	return "?"
+}
+
+// avatar is a profile's initial on a square of its color, with a dot
+// breathing at its corner while the profile is working.
+func avatar(c *ui.Context, p palette, name string, color ui.Color, size float32, live bool, ring ui.Color) {
+	ui.Box(c).Size(size, size).Radius(size * 0.3).Shrink(0).Center().
+		LinearGradient(ui.LinearGradient{From: color.Mix(ui.Hex("#ffffff"), 0.18), To: color, Angle: 180}).
+		Children(func() {
+			ui.Text(c, initial(name)).FontSize(size * 0.5).FontWeight(700).TextColor(ui.Hex("#ffffff")).SingleLine()
+			if live {
+				liveDot(ui.Box(c).Absolute().Right(-5).Bottom(-5), c, p, 8, ring)
+			}
+		})
+}
+
+// liveDot is a small green dot for what is working now, with a halo
+// breathing out of it a few times as it appears. It then stands still, so
+// that it draws no frames while it stays; Reduce Motion stills it at once.
+func liveDot(e ui.Element, c *ui.Context, p palette, size float32, ring ui.Color) {
+	const breaths = 3
+	tl := e.Timeline("live", ui.TimelineOptions{})
+	v := tl.Tween(ui.Tween{From: 0, To: breaths, Duration: breaths * 1800 * time.Millisecond, Ease: ui.Linear}, ui.AtTime(0))
+	t := float32(1)
+	if v < breaths {
+		t = easeOutCubic(v - float32(math.Floor(float64(v))))
+	}
+	e.Size(size+4, size+4).Shrink(0).Draw(func(pt *ui.Painter, r ui.Rect) {
+		cx, cy := r.X+r.W/2, r.Y+r.H/2
+		halo := size/2 + 5*t
+		pt.Fill(ui.Rect{X: cx - halo, Y: cy - halo, W: 2 * halo, H: 2 * halo}, p.green.Alpha(0.35*(1-t)), halo)
+		if ring.A > 0 {
+			o := size/2 + 2
+			pt.Fill(ui.Rect{X: cx - o, Y: cy - o, W: 2 * o, H: 2 * o}, ring, o)
+		}
+		d := size / 2
+		pt.Fill(ui.Rect{X: cx - d, Y: cy - d, W: size, H: size}, p.green, d)
+	})
+}
+
+// change says how much cur is above or below prev, as "+12%", and whether
+// it went up. ok is false when there is nothing to compare with.
+func change(cur, prev float64) (text string, up, ok bool) {
+	if prev <= 0 {
+		return "", false, false
+	}
+	f := (cur - prev) / prev * 100
+	switch {
+	case f >= 999:
+		return fmt.Sprintf("%.0f×", cur/prev), true, true
+	case math.Abs(f) < 0.5:
+		return "±0%", true, true
+	case f > 0:
+		return fmt.Sprintf("+%.0f%%", f), true, true
+	}
+	return fmt.Sprintf("−%.0f%%", -f), false, true
+}
+
+// deltaPill is a corner pill of how a number changed from the window
+// before, with what it is compared with under the pointer.
+func deltaPill(c *ui.Context, p palette, cur, prev float64, than string) {
+	text, up, ok := change(cur, prev)
+	if !ok {
+		return
+	}
+	icon, color := iconTrendUp, p.green
+	if !up {
+		icon, color = iconTrendDown, p.orange
+	}
+	e := ui.Row(c).Attach(ui.AnchorTopRight, ui.AnchorTopRight).Top(-3).Tooltip(than)
+	pillIn(e, c, p, icon, color, text)
 }

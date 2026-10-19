@@ -12,6 +12,7 @@ type palette struct {
 	text, muted, faint  ui.Color
 	border              ui.Color
 	shadow              ui.Color // under a card
+	lift                ui.Color // under a card raised by the pointer
 	highlight           ui.Color // the light along a card's top edge
 	selected, selText   ui.Color
 	blue, green, red    ui.Color
@@ -32,6 +33,7 @@ func paletteOf(t *ui.Theme) palette {
 			text: ui.Hex("#f5f5f7"), muted: ui.Hex("#a1a1a8"), faint: ui.Hex("#65656b"),
 			border:    ui.RGBA(255, 255, 255, 0.06),
 			shadow:    ui.RGBA(0, 0, 0, 0.32),
+			lift:      ui.RGBA(0, 0, 0, 0.55),
 			highlight: ui.RGBA(255, 255, 255, 0.045),
 			selected:  t.Accent, selText: t.AccentText,
 			blue: ui.Hex("#4c8dff"), green: ui.Hex("#4cd964"), red: ui.Hex("#ff5470"),
@@ -47,6 +49,7 @@ func paletteOf(t *ui.Theme) palette {
 		text: ui.Hex("#1d1d1f"), muted: ui.Hex("#6e6e73"), faint: ui.Hex("#a7a7ad"),
 		border:    ui.RGBA(0, 0, 0, 0.06),
 		shadow:    ui.RGBA(20, 20, 40, 0.06),
+		lift:      ui.RGBA(20, 20, 40, 0.16),
 		highlight: ui.Transparent,
 		selected:  t.Accent, selText: t.AccentText,
 		blue: ui.Hex("#1f6fff"), green: ui.Hex("#20a83e"), red: ui.Hex("#e8344f"),

@@ -63,14 +63,26 @@ type app struct {
 	cliInstalled   bool
 	loaded         bool
 
-	// Overview.
-	rangeIdx   int
-	scanner    *usage.Scanner
-	summary    *usage.Summary
-	summaryKey string
-	storage    map[string]*usage.Storage
-	usageGen   int
-	usageDone  int
+	// Overview. usageWant is the key of the summary being read, and
+	// byProfile the totals of every profile over the range of byProfileIdx.
+	rangeIdx     int
+	scanner      *usage.Scanner
+	summary      *usage.Summary
+	summaryKey   string
+	usageWant    string
+	storage      map[string]*usage.Storage
+	usageGen     int
+	usageDone    int
+	byProfile    map[string]usage.Period
+	byProfileIdx int
+	allSessions  bool // Recent Sessions shows them all
+	// storageAt is when each profile's folder was measured, so that the
+	// window coming to the front does not walk it again each time;
+	// measuring holds those being measured.
+	storageAt map[string]time.Time
+	measuring map[string]bool
+	// active is when each profile last wrote a transcript.
+	active map[string]time.Time
 
 	// Install. detect finds the installs, the login shell's claude and the
 	// newest version, as installDetect does but for tests.
@@ -117,6 +129,9 @@ type app struct {
 	paletteQuery string
 	paletteSel   int
 	paletteHover string // the row under the pointer
+	// clipboard is what a command of the palette copies, which the palette
+	// writes as it closes.
+	clipboard string
 
 	// toasts waits for the next frame, which shows it.
 	toasts []string
@@ -147,6 +162,9 @@ func newApp(env *claude.Env, cfgDir, exe string) *app {
 		rangeIdx:   1,
 		scanner:    usage.NewScanner(),
 		storage:    map[string]*usage.Storage{},
+		storageAt:  map[string]time.Time{},
+		measuring:  map[string]bool{},
+		active:     map[string]time.Time{},
 		plans:      map[string]*clean.Plan{},
 		chosenVers: map[string]bool{},
 	}
@@ -170,7 +188,17 @@ func (a *app) toast(s string) { a.toasts = append(a.toasts, s) }
 
 // busy reports whether something is still being read.
 func (a *app) busy() bool {
-	return !a.loaded || a.instLoading || a.planBusy || a.usageDone != a.usageGen
+	return !a.loaded || a.instLoading || a.planBusy || a.usageDone != a.usageGen && a.summaryKey != a.usageWant
+}
+
+// liveWithin is how recently a profile wrote a transcript for it to show
+// as working now.
+const liveWithin = 5 * time.Minute
+
+// live reports whether a profile wrote a transcript in the last minutes.
+func (a *app) live(name string) bool {
+	t, ok := a.active[name]
+	return ok && !t.IsZero() && a.now().Sub(t) < liveWithin
 }
 
 // profile returns the profile name, nil when there is none.
@@ -211,10 +239,37 @@ func (a *app) isDefault(name string) bool {
 	return d == name
 }
 
-// refresh reads everything anew.
+// refresh reads everything anew, measuring the folders again too.
 func (a *app) refresh() {
+	clear(a.storageAt)
 	a.loadProfiles()
 	a.loadInstall()
+}
+
+// pulse reads again what changes as Claude Code works: when each profile
+// last wrote, and the usage shown. The window does it every minute while
+// it is in front; it reads only the transcripts that changed.
+func (a *app) pulse() {
+	if !a.loaded {
+		return
+	}
+	a.loadActivity()
+	a.loadUsage()
+}
+
+// loadActivity finds when each profile last wrote a transcript.
+func (a *app) loadActivity() {
+	dirs := map[string]string{}
+	for _, p := range a.profiles {
+		dirs[p.Name] = p.Dir
+	}
+	a.do(func() func() {
+		active := make(map[string]time.Time, len(dirs))
+		for name, dir := range dirs {
+			active[name] = usage.LastActive(dir)
+		}
+		return func() { a.active = active }
+	})
 }
 
 // loadProfiles finds the profiles and the launchers of ~/.zshrc. A
@@ -252,6 +307,7 @@ func (a *app) loadProfiles() {
 					a.current = d
 				}
 			}
+			a.loadActivity()
 			a.loadUsage()
 			a.loadStorage(a.current)
 			if a.page == pageCleanup {
@@ -288,15 +344,18 @@ func (a *app) saveConfig() {
 	a.writeShell()
 }
 
-// loadUsage reads the transcripts of the current profile for the range.
+// loadUsage reads the transcripts of the current profile for the range,
+// then the totals of the others.
 func (a *app) loadUsage() {
 	p := a.cur()
 	if p == nil {
 		return
 	}
 	r := ranges[a.rangeIdx]
-	key := fmt.Sprintf("%s/%d", p.Name, a.rangeIdx)
+	idx := a.rangeIdx
+	key := fmt.Sprintf("%s/%d", p.Name, idx)
 	a.usageGen++
+	a.usageWant = key
 	gen := a.usageGen
 	now := a.now()
 	dir := p.Dir
@@ -309,17 +368,45 @@ func (a *app) loadUsage() {
 			}
 		}
 	})
+	dirs := map[string]string{}
+	for _, q := range a.profiles {
+		dirs[q.Name] = q.Dir
+	}
+	a.do(func() func() {
+		totals := make(map[string]usage.Period, len(dirs))
+		for name, dir := range dirs {
+			sum := a.scanner.Scan(dir, now.Add(-r.d), now, 1)
+			totals[name] = usage.Period{Tokens: sum.Tokens, Replies: sum.Replies, Sessions: sum.Sessions}
+		}
+		return func() {
+			if gen == a.usageGen {
+				a.byProfile, a.byProfileIdx = totals, idx
+			}
+		}
+	})
 }
+
+// storageFresh is how long a folder's measure is shown before the window
+// coming to the front measures it again; Refresh always does.
+const storageFresh = 2 * time.Minute
 
 func (a *app) loadStorage(name string) {
 	p := a.profile(name)
-	if p == nil {
+	if p == nil || a.measuring[name] {
 		return
 	}
+	if at, ok := a.storageAt[name]; ok && a.storage[name] != nil && a.now().Sub(at) < storageFresh && !a.now().Before(at) {
+		return
+	}
+	a.measuring[name] = true
 	dir := p.Dir
 	a.do(func() func() {
 		st := usage.MeasureStorage(dir)
-		return func() { a.storage[name] = &st }
+		return func() {
+			a.storage[name] = &st
+			a.storageAt[name] = a.now()
+			delete(a.measuring, name)
+		}
 	})
 }
 

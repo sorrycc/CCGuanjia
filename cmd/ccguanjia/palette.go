@@ -1,9 +1,12 @@
 package main
 
 import (
+	"path/filepath"
 	"strings"
+	"time"
 	"unicode/utf8"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/updater"
 	"github.com/egoist/mygo/ui"
 
@@ -20,6 +23,12 @@ type command struct {
 	title, hint string
 	run         func()
 }
+
+// paletteMatch is the identity of the palette's highlight, which glides
+// to the row chosen, a little quicker than the sidebar's as keys repeat.
+type paletteMatch struct{}
+
+var paletteGlide = ui.Animation{Spring: ui.SpringOptions{Duration: 240 * time.Millisecond, Bounce: 0.08}}
 
 // paletteRows is how many rows the palette shows at most.
 const paletteRows = 8
@@ -60,6 +69,42 @@ func (a *app) commands() []command {
 					a.toast(errText(err))
 				}
 			}})
+	}
+	// The sessions of the current profile active last, to resume.
+	if pr := a.cur(); pr != nil && a.summary != nil && a.summaryKey == a.usageWant {
+		for i, s := range a.summary.Recent {
+			if i == 5 {
+				break
+			}
+			name := filepath.Base(s.Project)
+			if s.Project == "" {
+				name = "—"
+			}
+			cmds = append(cmds, command{"resume-" + s.ID, iconHistory, func(p palette) ui.Color { return sessionColor(p, s.Project) },
+				locales.ResumeIn(name), ago(a.now(), s.Last) + " · " + pr.Name, func() {
+					if err := a.resumeSession(pr.Name, s); err != nil {
+						a.toast(errText(err))
+					}
+				}})
+		}
+	}
+	for _, pr := range a.profiles {
+		launcher := "claude"
+		if !pr.Default {
+			launcher = shell.FunctionName(pr.Name)
+		}
+		cmds = append(cmds,
+			command{"copy-" + pr.Name, iconCopy, func(p palette) ui.Color { return p.gray },
+				locales.CopyLauncher(launcher), pr.Name, func() {
+					a.clipboard = launcher
+					a.toast(locales.Copied())
+				}},
+			command{"reveal-" + pr.Name, iconReveal, func(p palette) ui.Color { return p.blue },
+				locales.RevealProfile(pr.Name), a.shortPath(pr.Dir), func() {
+					if !a.sync {
+						mygo.Shell.ShowItemInFolder(pr.Dir)
+					}
+				}})
 	}
 	cmds = append(cmds,
 		command{"new", iconPlus, func(p palette) ui.Color { return p.purple }, locales.NewProfile(), "⌘N", func() {
@@ -137,6 +182,10 @@ func (a *app) palette(c *ui.Context, p palette) {
 	run := func(cmd command) {
 		a.paletteOpen = false
 		cmd.run()
+		if a.clipboard != "" {
+			c.WriteClipboard(a.clipboard)
+			a.clipboard = ""
+		}
 	}
 	ui.DialogBase(c, &a.paletteOpen, func(backdrop, panel ui.Element) {
 		backdrop.Background(ui.RGBA(0, 0, 0, 0.28)).Justify(ui.Start).Padding(110, 0, 0)
@@ -168,12 +217,17 @@ func (a *app) palette(c *ui.Context, p palette) {
 				ui.Text(c, locales.NoMatches()).FontSize(13).TextColor(p.muted).Padding(14, 12)
 				return
 			}
+			// The rows shown follow the one chosen past the last of them.
+			first := max(0, a.paletteSel-paletteRows+1)
 			for i, cmd := range matches {
-				if i == paletteRows {
+				if i < first {
+					continue
+				}
+				if i == first+paletteRows {
 					break
 				}
 				r := ui.Row(c.Key(cmd.key)).Gap(12).Padding(8, 12).Radius(10).AlignItems(ui.Center).Cursor(ui.CursorPointer).
-					Label(cmd.title).Transition(quick)
+					Label(cmd.title).Transition(ui.ElementTransition{Colors: true, Position: true, Duration: 140 * time.Millisecond})
 				// The pointer chooses the row it comes onto, and the keys
 				// choose while it stays.
 				if r.Hovered() {
@@ -183,11 +237,17 @@ func (a *app) palette(c *ui.Context, p palette) {
 					}
 				}
 				sel := i == a.paletteSel
-				if sel {
-					r.Background(p.tint(p.selected))
-				}
 				r.OnClick(func() { run(cmd) }).Children(func() {
-					iconSquare(c, p, cmd.icon, cmd.color(p), 26)
+					if sel {
+						ui.Box(c.Key("sel")).Absolute().Left(0).Top(0).Right(0).Bottom(0).Radius(10).Background(p.tint(p.selected)).
+							Transition(ui.ElementTransition{Animation: &paletteGlide, Match: paletteMatch{}})
+					}
+					// A profile's page shows its avatar.
+					if name, ok := strings.CutPrefix(cmd.key, "profile-"); ok {
+						avatar(c, p, name, a.profileColor(p, name), 26, a.live(name), p.card)
+					} else {
+						iconSquare(c, p, cmd.icon, cmd.color(p), 26)
+					}
 					ui.Text(c, cmd.title).FontSize(14).FontWeight(500).TextColor(p.text).SingleLine().Grow(1).Shrink(1).MinWidth(0)
 					if cmd.hint != "" {
 						ui.Text(c, cmd.hint).FontSize(12).TextColor(p.muted).SingleLine().Shrink(0)

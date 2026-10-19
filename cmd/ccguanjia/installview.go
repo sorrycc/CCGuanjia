@@ -65,6 +65,9 @@ func (a *app) installPage(c *ui.Context, p palette) {
 					}
 					ui.PrimaryButton(c.Key("update"), locales.Update()).Disabled(busy).OnClick(func() { a.runInstall(install.Update) })
 					ui.Button(c.Key("reinstall"), locales.ReinstallButton()).Disabled(busy).OnClick(func() { a.reinstallQ = true })
+					if a.updateAvailable() {
+						ui.Button(c.Key("whats-new"), locales.WhatsNew()).Tooltip(changelogURL).OnClick(func() { c.OpenURL(changelogURL) })
+					}
 					if busy {
 						ui.Spinner(c)
 					}
@@ -159,6 +162,9 @@ func (a *app) versionsCard(c *ui.Context, p palette) {
 		}
 	})
 }
+
+// changelogURL is Claude Code's list of changes, for an update.
+const changelogURL = "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md"
 
 func firstNonEmpty(ss ...string) string {
 	for _, s := range ss {

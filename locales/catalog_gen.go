@@ -34,6 +34,16 @@ type Messages struct{ locale string }
 // source language.
 func In(locale string) Messages { return Messages{locale} }
 
+// AfterCleanup says "After cleanup"
+// in the language the app shows.
+func AfterCleanup() string { return In(i18n.Locale()).AfterCleanup() }
+
+// AfterCleanup says "After cleanup"
+// in the language of msgs.
+func (msgs Messages) AfterCleanup() string {
+	return Catalog.Format(msgs.locale, "afterCleanup", nil)
+}
+
 // AlsoSignOut says "Also sign out of this profile"
 // in the language the app shows.
 func AlsoSignOut() string { return In(i18n.Locale()).AlsoSignOut() }
@@ -536,6 +546,16 @@ func (msgs Messages) CopyID() string {
 	return Catalog.Format(msgs.locale, "copyID", nil)
 }
 
+// CopyLauncher says "Copy {command}"
+// in the language the app shows.
+func CopyLauncher(command string) string { return In(i18n.Locale()).CopyLauncher(command) }
+
+// CopyLauncher says "Copy {command}"
+// in the language of msgs.
+func (msgs Messages) CopyLauncher(command string) string {
+	return Catalog.Format(msgs.locale, "copyLauncher", map[string]any{"command": command})
+}
+
 // CopyServers says "Copy Servers"
 // in the language the app shows.
 func CopyServers() string { return In(i18n.Locale()).CopyServers() }
@@ -764,6 +784,16 @@ func Folder() string { return In(i18n.Locale()).Folder() }
 // in the language of msgs.
 func (msgs Messages) Folder() string {
 	return Catalog.Format(msgs.locale, "folder", nil)
+}
+
+// FolderGone says "That folder is no longer there."
+// in the language the app shows.
+func FolderGone() string { return In(i18n.Locale()).FolderGone() }
+
+// FolderGone says "That folder is no longer there."
+// in the language of msgs.
+func (msgs Messages) FolderGone() string {
+	return Catalog.Format(msgs.locale, "folderGone", nil)
 }
 
 // FolderNow says "Folder now"
@@ -1066,6 +1096,26 @@ func (msgs Messages) LinkUnlinked() string {
 	return Catalog.Format(msgs.locale, "linkUnlinked", nil)
 }
 
+// Live says "Live"
+// in the language the app shows.
+func Live() string { return In(i18n.Locale()).Live() }
+
+// Live says "Live"
+// in the language of msgs.
+func (msgs Messages) Live() string {
+	return Catalog.Format(msgs.locale, "live", nil)
+}
+
+// LiveNote says "Claude Code wrote to this session in the last 5 minutes."
+// in the language the app shows.
+func LiveNote() string { return In(i18n.Locale()).LiveNote() }
+
+// LiveNote says "Claude Code wrote to this session in the last 5 minutes."
+// in the language of msgs.
+func (msgs Messages) LiveNote() string {
+	return Catalog.Format(msgs.locale, "liveNote", nil)
+}
+
 // LocalOnlyNote says "Read from the local .claude.json only. CCGuanjia never reads or sends the sign-in token."
 // in the language the app shows.
 func LocalOnlyNote() string { return In(i18n.Locale()).LocalOnlyNote() }
@@ -1164,6 +1214,16 @@ func More() string { return In(i18n.Locale()).More() }
 // in the language of msgs.
 func (msgs Messages) More() string {
 	return Catalog.Format(msgs.locale, "more", nil)
+}
+
+// MoreProfiles says "and {count} more"
+// in the language the app shows.
+func MoreProfiles(count int) string { return In(i18n.Locale()).MoreProfiles(count) }
+
+// MoreProfiles says "and {count} more"
+// in the language of msgs.
+func (msgs Messages) MoreProfiles(count int) string {
+	return Catalog.Format(msgs.locale, "moreProfiles", map[string]any{"count": count})
 }
 
 // Name says "Name"
@@ -2008,6 +2068,16 @@ func (msgs Messages) Resume() string {
 	return Catalog.Format(msgs.locale, "resume", nil)
 }
 
+// ResumeIn says "Resume {project}"
+// in the language the app shows.
+func ResumeIn(project string) string { return In(i18n.Locale()).ResumeIn(project) }
+
+// ResumeIn says "Resume {project}"
+// in the language of msgs.
+func (msgs Messages) ResumeIn(project string) string {
+	return Catalog.Format(msgs.locale, "resumeIn", map[string]any{"project": project})
+}
+
 // ResumeNote says "Opens the terminal in the session's folder and resumes it with this profile."
 // in the language the app shows.
 func ResumeNote() string { return In(i18n.Locale()).ResumeNote() }
@@ -2016,6 +2086,16 @@ func ResumeNote() string { return In(i18n.Locale()).ResumeNote() }
 // in the language of msgs.
 func (msgs Messages) ResumeNote() string {
 	return Catalog.Format(msgs.locale, "resumeNote", nil)
+}
+
+// RevealProfile says "Show {name} in Finder"
+// in the language the app shows.
+func RevealProfile(name string) string { return In(i18n.Locale()).RevealProfile(name) }
+
+// RevealProfile says "Show {name} in Finder"
+// in the language of msgs.
+func (msgs Messages) RevealProfile(name string) string {
+	return Catalog.Format(msgs.locale, "revealProfile", map[string]any{"name": name})
 }
 
 // RunAnyway says "Run anyway"
@@ -2238,6 +2318,16 @@ func (msgs Messages) ShortcutStep() string {
 	return Catalog.Format(msgs.locale, "shortcutStep", nil)
 }
 
+// ShowAllSessions says "Show all {count}"
+// in the language the app shows.
+func ShowAllSessions(count int) string { return In(i18n.Locale()).ShowAllSessions(count) }
+
+// ShowAllSessions says "Show all {count}"
+// in the language of msgs.
+func (msgs Messages) ShowAllSessions(count int) string {
+	return Catalog.Format(msgs.locale, "showAllSessions", map[string]any{"count": count})
+}
+
 // ShowBackup says "Show Backup"
 // in the language the app shows.
 func ShowBackup() string { return In(i18n.Locale()).ShowBackup() }
@@ -2246,6 +2336,16 @@ func ShowBackup() string { return In(i18n.Locale()).ShowBackup() }
 // in the language of msgs.
 func (msgs Messages) ShowBackup() string {
 	return Catalog.Format(msgs.locale, "showBackup", nil)
+}
+
+// ShowFewer says "Show fewer"
+// in the language the app shows.
+func ShowFewer() string { return In(i18n.Locale()).ShowFewer() }
+
+// ShowFewer says "Show fewer"
+// in the language of msgs.
+func (msgs Messages) ShowFewer() string {
+	return Catalog.Format(msgs.locale, "showFewer", nil)
 }
 
 // ShowInFinder says "Show in Finder"
@@ -2296,6 +2396,16 @@ func SignedIn() string { return In(i18n.Locale()).SignedIn() }
 // in the language of msgs.
 func (msgs Messages) SignedIn() string {
 	return Catalog.Format(msgs.locale, "signedIn", nil)
+}
+
+// SignedInOf says "{signed} of {total} signed in"
+// in the language the app shows.
+func SignedInOf(signed int, total int) string { return In(i18n.Locale()).SignedInOf(signed, total) }
+
+// SignedInOf says "{signed} of {total} signed in"
+// in the language of msgs.
+func (msgs Messages) SignedInOf(signed int, total int) string {
+	return Catalog.Format(msgs.locale, "signedInOf", map[string]any{"signed": signed, "total": total})
 }
 
 // SignedOut says "Signed out"
@@ -2398,6 +2508,36 @@ func (msgs Messages) TerminalAppNote() string {
 	return Catalog.Format(msgs.locale, "terminalAppNote", nil)
 }
 
+// ThanPrevDay says "Compared with the 24 hours before"
+// in the language the app shows.
+func ThanPrevDay() string { return In(i18n.Locale()).ThanPrevDay() }
+
+// ThanPrevDay says "Compared with the 24 hours before"
+// in the language of msgs.
+func (msgs Messages) ThanPrevDay() string {
+	return Catalog.Format(msgs.locale, "thanPrevDay", nil)
+}
+
+// ThanPrevMonth says "Compared with the 30 days before"
+// in the language the app shows.
+func ThanPrevMonth() string { return In(i18n.Locale()).ThanPrevMonth() }
+
+// ThanPrevMonth says "Compared with the 30 days before"
+// in the language of msgs.
+func (msgs Messages) ThanPrevMonth() string {
+	return Catalog.Format(msgs.locale, "thanPrevMonth", nil)
+}
+
+// ThanPrevWeek says "Compared with the 7 days before"
+// in the language the app shows.
+func ThanPrevWeek() string { return In(i18n.Locale()).ThanPrevWeek() }
+
+// ThanPrevWeek says "Compared with the 7 days before"
+// in the language of msgs.
+func (msgs Messages) ThanPrevWeek() string {
+	return Catalog.Format(msgs.locale, "thanPrevWeek", nil)
+}
+
 // ToArchive says "To archive"
 // in the language the app shows.
 func ToArchive() string { return In(i18n.Locale()).ToArchive() }
@@ -2488,6 +2628,16 @@ func (msgs Messages) UpdateAvailable() string {
 	return Catalog.Format(msgs.locale, "updateAvailable", nil)
 }
 
+// UpdateShort says "Update"
+// in the language the app shows.
+func UpdateShort() string { return In(i18n.Locale()).UpdateShort() }
+
+// UpdateShort says "Update"
+// in the language of msgs.
+func (msgs Messages) UpdateShort() string {
+	return Catalog.Format(msgs.locale, "updateShort", nil)
+}
+
 // UpdateTo says "{version} available"
 // in the language the app shows.
 func UpdateTo(version string) string { return In(i18n.Locale()).UpdateTo(version) }
@@ -2570,4 +2720,14 @@ func Weekdays() string { return In(i18n.Locale()).Weekdays() }
 // in the language of msgs.
 func (msgs Messages) Weekdays() string {
 	return Catalog.Format(msgs.locale, "weekdays", nil)
+}
+
+// WhatsNew says "What's New"
+// in the language the app shows.
+func WhatsNew() string { return In(i18n.Locale()).WhatsNew() }
+
+// WhatsNew says "What's New"
+// in the language of msgs.
+func (msgs Messages) WhatsNew() string {
+	return Catalog.Format(msgs.locale, "whatsNew", nil)
 }

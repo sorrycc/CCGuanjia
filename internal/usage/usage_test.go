@@ -65,6 +65,13 @@ func TestScan(t *testing.T) {
 	if at := now.Add(-time.Hour).Local(); hours != 3 || sum.Hours[at.Weekday()][at.Hour()] != 1 {
 		t.Errorf("hours %v", sum.Hours)
 	}
+	// The day before, which starts with m3, 48 hours ago.
+	if sum.Prev.Replies != 1 || sum.Prev.Tokens.Input != 1000 || sum.Prev.Sessions != 1 {
+		t.Errorf("prev %+v", sum.Prev)
+	}
+	if got := s.Scan(dir, now.Add(-12*time.Hour), now, 12); got.Prev.Replies != 1 || got.Prev.Tokens.Input != 100 {
+		t.Errorf("prev of 12h %+v", got.Prev)
+	}
 	// A wider window, from the cache.
 	if got := s.Scan(dir, now.Add(-72*time.Hour), now, 3); got.Tokens.Input != 1117 {
 		t.Errorf("72h %+v", got.Tokens)
@@ -76,6 +83,23 @@ func TestScan(t *testing.T) {
 	os.Chtimes(q, now, now)
 	if got := s.Scan(dir, now.Add(-24*time.Hour), now, 24); got.Replies != 4 {
 		t.Errorf("after append: %d replies", got.Replies)
+	}
+}
+
+func TestLastActive(t *testing.T) {
+	dir := t.TempDir()
+	if !LastActive(dir).IsZero() {
+		t.Error("an empty folder was active")
+	}
+	at := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	for i, name := range []string{"-a/s.jsonl", "-b/t.jsonl", "-b/notes.txt"} {
+		p := filepath.Join(dir, "projects", name)
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, nil, 0o600)
+		os.Chtimes(p, at.Add(time.Duration(i)*time.Hour), at.Add(time.Duration(i)*time.Hour))
+	}
+	if got := LastActive(dir); !got.Equal(at.Add(time.Hour)) {
+		t.Errorf("last active %v", got)
 	}
 }
 

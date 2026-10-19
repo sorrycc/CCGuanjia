@@ -33,8 +33,12 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
 - **Overview.** Tokens, sessions and models from the transcripts over 24 hours, 7 days or 30 days, a heatmap of the
   hours you work, tokens by project, what each folder takes by type and by project, and how Claude Code is installed.
 - **Recent sessions.** The sessions active last, each with its folder, model and size, and **Resume**, which opens
-  the terminal in its folder and resumes it with the profile.
-- **Command palette.** ⌘K goes to any page or profile, starts a profile in the terminal, or makes a new one.
+  the terminal in its folder and resumes it with the profile. Those going on show as **Live**.
+- **Live and compared.** A profile working now has a breathing dot, tokens and sessions show how they changed from
+  the period before, and Overview compares the profiles' tokens. While the window is in front, it follows Claude
+  Code minute by minute, reading only the transcripts that changed.
+- **Command palette.** ⌘K goes to any page or profile, starts a profile in the terminal, resumes a recent session,
+  copies a launcher, or makes a new profile.
 - **Install.** Finds the native installer, npm, Homebrew or Bun, and updates or reinstalls through that method's
   official command. It warns when there are several installs or `claude` is a shell function, and removes the native
   installer's old versions that are neither current nor running.
@@ -56,7 +60,8 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
   <tr>
     <td><b>Install</b>: the install that runs, updates, and old native versions<br>
       <a href="docs/screenshots/install-dark.png"><img alt="The Install page" src="docs/screenshots/install-dark.png"></a></td>
-    <td></td>
+    <td><b>Command palette</b> (⌘K): pages, profiles, sessions to resume and actions<br>
+      <a href="docs/screenshots/palette-dark.png"><img alt="The command palette" src="docs/screenshots/palette-dark.png"></a></td>
   </tr>
 </table>
 

@@ -78,10 +78,20 @@ type Summary struct {
 	// Recent are the sessions of the window, the latest active first, at
 	// most RecentSessions of them.
 	Recent []Session
+	// Prev is the window of the same length just before this one, to
+	// compare with.
+	Prev Period
+}
+
+// Period is the totals of a window of time.
+type Period struct {
+	Tokens   Tokens
+	Replies  int
+	Sessions int
 }
 
 // RecentSessions is how many sessions Summary.Recent keeps.
-const RecentSessions = 8
+const RecentSessions = 20
 
 // Session is a conversation of a transcript, over the window.
 type Session struct {
@@ -102,18 +112,20 @@ type Share struct {
 }
 
 // Scan reads the transcripts of dir (a profile's folder) that changed
-// since `since`, and sums the replies from then until now in n buckets.
+// since the window before `since`, sums the replies from `since` until
+// now in n buckets, and those of the window before into Prev.
 func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	root := filepath.Join(dir, "projects")
+	prevSince := since.Add(-now.Sub(since))
 	seenFiles := map[string]bool{}
 	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".jsonl") {
 			return nil
 		}
 		fi, err := d.Info()
-		if err != nil || fi.ModTime().Before(since) {
+		if err != nil || fi.ModTime().Before(prevSince) {
 			return nil
 		}
 		seenFiles[path] = true
@@ -135,13 +147,14 @@ func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 	sessions := map[string]*sessionAcc{}
 	models := map[string]int64{}
 	projects := map[string]int64{}
-	from, to := since.Unix(), now.Unix()
+	prevSessions := map[string]bool{}
+	before, from, to := prevSince.Unix(), since.Unix(), now.Unix()
 	for path, c := range s.files {
 		if !strings.HasPrefix(path, root+string(filepath.Separator)) {
 			continue
 		}
 		for _, e := range c.entries {
-			if e.at < from || e.at > to {
+			if e.at < before || e.at > to {
 				continue
 			}
 			if e.id != "" {
@@ -149,6 +162,12 @@ func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 					continue
 				}
 				seen[e.id] = true
+			}
+			if e.at < from {
+				sum.Prev.Tokens.add(e.tokens)
+				sum.Prev.Replies++
+				prevSessions[e.session] = true
+				continue
 			}
 			sum.Tokens.add(e.tokens)
 			sum.Replies++
@@ -169,6 +188,7 @@ func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 		}
 	}
 	sum.Sessions = len(sessions)
+	sum.Prev.Sessions = len(prevSessions)
 	sum.Recent = recent(sessions, RecentSessions)
 	sum.Models = shares(models)
 	sum.Projects = shares(projects)
@@ -285,6 +305,36 @@ func readFile(path string) []entry {
 		})
 	}
 	return out
+}
+
+// LastActive is when a transcript of dir (a profile's folder) was last
+// written, the zero time when it has none. It looks only at the files'
+// times, not into them, so it is cheap enough to ask often.
+func LastActive(dir string) time.Time {
+	var last time.Time
+	root := filepath.Join(dir, "projects")
+	projects, err := os.ReadDir(root)
+	if err != nil {
+		return last
+	}
+	for _, p := range projects {
+		if !p.IsDir() {
+			continue
+		}
+		files, err := os.ReadDir(filepath.Join(root, p.Name()))
+		if err != nil {
+			continue
+		}
+		for _, f := range files {
+			if f.IsDir() || !strings.HasSuffix(f.Name(), ".jsonl") {
+				continue
+			}
+			if fi, err := f.Info(); err == nil && fi.ModTime().After(last) {
+				last = fi.ModTime()
+			}
+		}
+	}
+	return last
 }
 
 // Entry is a part of a folder and its size.

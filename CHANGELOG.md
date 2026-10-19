@@ -48,6 +48,30 @@ needs a `## <version>` section here, or its build fails.
 - Keyboard shortcuts: ⌘N for a new profile and ⌥⌘↓ / ⌥⌘↑ for the next or
   previous profile, listed in Settings.
 - Show a profile's folder in Finder from its page.
+- Each profile has an avatar of its initial in its own color, in the
+  sidebar, Overview and the command palette, and the default profile of
+  new shells is marked with ★.
+- Live: a green dot breathes on a profile that wrote a transcript in the
+  last 5 minutes, and Recent Sessions marks the sessions going on as
+  **Live**. While the window is in front, Overview follows Claude Code
+  minute by minute.
+- Tokens and Sessions show how they changed from the 24 hours, 7 days or
+  30 days before.
+- Overview's Profiles card shows each profile's tokens over the range; a
+  click shows that profile.
+- Recent Sessions shows 6 sessions, and **Show all** the 20 latest, each
+  with a button showing its folder in Finder.
+- The command palette resumes the latest sessions, copies a profile's
+  launcher and shows its folder in Finder. Its list now follows the arrow
+  keys past the 8 rows it shows, and its highlight glides between rows.
+- When a newer Claude Code is out, the sidebar says so, and Install has
+  **What's New**, opening Claude Code's changelog.
+- Cleanup shows the folder now and after the cleanup chosen, with a bar
+  of what it removes that follows the check boxes.
+- Cards that open a page rise a little under the pointer.
+- The window coming to the front no longer measures the profile's whole
+  folder again each time: a measure stays for 2 minutes, and Refresh
+  measures at once.
 - Placeholders that glow softly while something is read, and the refresh
   button turns until everything is.
 - Faster: a profile's `.claude.json` is read once as it loads instead of

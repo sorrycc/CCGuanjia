@@ -1,12 +1,16 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"ccguanjia/internal/claude"
@@ -78,8 +82,11 @@ func (a *app) overview(c *ui.Context, p palette) {
 				loadingValue(c, p, a.rangeLabel())
 				return
 			}
-			n, unit := splitNumber(tokens(sum.Tokens.Total()))
-			bigValue(c, p, a.rangeLabel(), n, unit)
+			ui.Box(c).Children(func() {
+				n, unit := splitNumber(tokens(sum.Tokens.Total()))
+				bigValue(c, p, a.rangeLabel(), n, unit)
+				deltaPill(c, p, float64(sum.Tokens.Total()), float64(sum.Prev.Tokens.Total()), a.prevLabel())
+			})
 			stats(c, p,
 				stat{locales.Input(), tokens(sum.Tokens.Input)},
 				stat{locales.Output(), tokens(sum.Tokens.Output)},
@@ -132,7 +139,7 @@ func (a *app) overview(c *ui.Context, p palette) {
 				}
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(4, 0, 0).Children(func() {
 					ui.Icon(c, iconArchive).Size(14, 14).TextColor(p.muted)
-					ui.Text(c, locales.VersionsKept(len(a.inst.Versions), clean.Size(old))).FontSize(13).TextColor(p.muted).SingleLine()
+					ui.Text(c, locales.VersionsKept(len(a.inst.Versions), clean.Size(old))).FontSize(13).TextColor(p.muted).LineHeight(1.35).Grow(1).Shrink(1).MinWidth(0)
 				})
 			}
 		})
@@ -175,7 +182,10 @@ func (a *app) overview(c *ui.Context, p palette) {
 				loadingValue(c, p, a.rangeLabel())
 				return
 			}
-			bigValue(c, p, a.rangeLabel(), fmt.Sprint(sum.Sessions), "")
+			ui.Box(c).Children(func() {
+				bigValue(c, p, a.rangeLabel(), fmt.Sprint(sum.Sessions), "")
+				deltaPill(c, p, float64(sum.Sessions), float64(sum.Prev.Sessions), a.prevLabel())
+			})
 			stats(c, p,
 				stat{locales.Replies(), fmt.Sprint(sum.Replies)},
 				stat{locales.Projects(), fmt.Sprint(len(sum.Projects))},
@@ -185,14 +195,14 @@ func (a *app) overview(c *ui.Context, p palette) {
 			})
 		})
 
-		// Profiles.
-		card(c, p, iconUsers, p.purple, locales.CardProfiles(), "", nil, func() {
-			signed := 0
-			for _, q := range a.profiles {
-				if q.SignedIn {
-					signed++
-				}
+		// Profiles, and the tokens of each over the range.
+		signed := 0
+		for _, q := range a.profiles {
+			if q.SignedIn {
+				signed++
 			}
+		}
+		card(c, p, iconUsers, p.purple, locales.CardProfiles(), locales.SignedInOf(signed, len(a.profiles)), nil, func() {
 			ui.Box(c).Children(func() {
 				bigValue(c, p, locales.OnThisMac(), fmt.Sprint(len(a.profiles)), "")
 				if a.shellInstalled {
@@ -201,21 +211,7 @@ func (a *app) overview(c *ui.Context, p palette) {
 					cornerPill(c, p, iconTerminal, p.gray, locales.ShellOff())
 				}
 			})
-			def := a.cfg.Default
-			if def == "" {
-				def = "default"
-			}
-			cli := locales.Off()
-			if a.cliInstalled {
-				cli = "ccgj"
-			}
-			stats(c, p, stat{locales.SignedIn(), fmt.Sprintf("%d / %d", signed, len(a.profiles))}, stat{locales.DefaultProfile(), def}, stat{locales.Command(), cli})
-			ui.Row(c).Gap(8).Padding(4, 0, 0).Children(func() {
-				ui.Button(c.Key("new-from-card"), locales.NewProfile()).OnClick(func() {
-					a.resetNew()
-					a.newOpen = true
-				})
-			})
+			a.profileUsage(c, p)
 		})
 
 		// Storage by type.
@@ -472,9 +468,15 @@ func (a *app) recentSessions(c *ui.Context, p palette, pr *claude.Profile, sum *
 		return
 	}
 	now := a.now()
+	shown := sum.Recent
+	if !a.allSessions && len(shown) > recentShown {
+		shown = shown[:recentShown]
+	}
 	ui.Column(c).Dividers(1, p.border).Gap(1).Children(func() {
-		for _, s := range sum.Recent {
-			r := ui.Row(c.Key(s.ID)).Gap(14).AlignItems(ui.Center).Padding(9, 8).Radius(10).Transition(quick)
+		for _, s := range shown {
+			r := ui.Row(c.Key(s.ID)).Gap(14).AlignItems(ui.Center).Padding(9, 8).Radius(10).
+				Transition(ui.ElementTransition{Colors: true, Position: true, Duration: 220 * time.Millisecond,
+					Enter: &ui.Motion{Collapse: true}, Exit: &ui.Motion{Collapse: true}})
 			hovered := r.Hovered()
 			if hovered {
 				r.Background(p.hover())
@@ -492,8 +494,23 @@ func (a *app) recentSessions(c *ui.Context, p palette, pr *claude.Profile, sum *
 				ui.Text(c, strings.TrimPrefix(s.Model, "claude-")).FontSize(12).TextColor(p.muted).SingleLine().Width(110).Shrink(0)
 				ui.Text(c, locales.RepliesCount(s.Replies)).FontSize(12).TextColor(p.muted).FontFeatures("tnum").SingleLine().Width(90).Shrink(0)
 				ui.Text(c, tokens(s.Tokens)).FontSize(13).FontWeight(600).TextColor(p.text).FontFeatures("tnum").SingleLine().Width(60).Shrink(0)
-				ui.Text(c, ago(now, s.Last)).FontSize(12).TextColor(p.muted).SingleLine().Width(90).Shrink(0)
+				if now.Sub(s.Last) < liveWithin {
+					ui.Row(c).Gap(4).AlignItems(ui.Center).Width(90).Shrink(0).Tooltip(locales.LiveNote()).Children(func() {
+						liveDot(ui.Box(c), c, p, 7, ui.Transparent)
+						ui.Text(c, locales.Live()).FontSize(12).FontWeight(600).TextColor(p.green).SingleLine()
+					})
+				} else {
+					ui.Text(c, ago(now, s.Last)).FontSize(12).TextColor(p.muted).SingleLine().Width(90).Shrink(0)
+				}
 				ui.Row(c).Gap(6).Shrink(0).AlignItems(ui.Center).Children(func() {
+					reveal := iconButton(c.Key("reveal"), p, iconReveal, locales.ShowInFinder())
+					reveal.OnClick(func() {
+						if fi, err := os.Stat(s.Project); err != nil || !fi.IsDir() {
+							a.toast(locales.FolderGone())
+						} else if !a.sync {
+							mygo.Shell.ShowItemInFolder(s.Project)
+						}
+					})
 					copyBtn := iconButton(c.Key("copy"), p, iconCopy, locales.CopyID())
 					copyBtn.OnClick(func() {
 						c.WriteClipboard(s.ID)
@@ -508,6 +525,98 @@ func (a *app) recentSessions(c *ui.Context, p palette, pr *claude.Profile, sum *
 			})
 		}
 	})
+	if n := len(sum.Recent); n > recentShown {
+		more := ui.Row(c.Key("more")).Gap(6).AlignItems(ui.Center).Justify(ui.Center).Padding(8).Radius(10).
+			Cursor(ui.CursorPointer).Transition(quick)
+		label := locales.ShowAllSessions(n)
+		if a.allSessions {
+			label = locales.ShowFewer()
+		}
+		more.Label(label)
+		if more.Hovered() {
+			more.Background(p.hover())
+		}
+		more.OnClick(func() { a.allSessions = !a.allSessions }).Children(func() {
+			ui.Text(c, label).FontSize(13).FontWeight(500).TextColor(p.muted)
+			turn := float32(0)
+			if a.allSessions {
+				turn = 180
+			}
+			ui.Icon(c, iconDown).Size(14, 14).TextColor(p.muted).AnimatePose(ui.Pose{Rotate: turn}, ui.Snappy)
+		})
+	}
+}
+
+// recentShown is how many sessions Recent Sessions shows before Show All.
+const recentShown = 6
+
+// profileUsage is a row for each profile, the busiest first, with its
+// tokens over the range as a bar; a click shows its overview.
+func (a *app) profileUsage(c *ui.Context, p palette) {
+	if a.byProfile == nil || a.byProfileIdx != a.rangeIdx {
+		loadingList(c, p, 3)
+		return
+	}
+	names := a.profileNames()
+	slices.SortStableFunc(names, func(x, y string) int {
+		return cmp.Compare(a.byProfile[y].Tokens.Total(), a.byProfile[x].Tokens.Total())
+	})
+	var top int64
+	for _, n := range names {
+		top = max(top, a.byProfile[n].Tokens.Total())
+	}
+	const most = 3
+	ui.Column(c).Gap(4).Children(func() {
+		for i, name := range names {
+			if i == most {
+				break
+			}
+			total := a.byProfile[name].Tokens.Total()
+			r := ui.Row(c.Key("usage-"+name)).Gap(10).AlignItems(ui.Center).Padding(5, 6).Margin(0, -6).Radius(8).
+				Cursor(ui.CursorPointer).Label(name).Transition(quick)
+			if r.Hovered() {
+				r.Background(p.hover())
+			}
+			if name == a.current {
+				r.Background(p.tint(p.selected).Alpha(0.5))
+			}
+			r.OnClick(func() { a.show(pageOverview, name) }).Children(func() {
+				avatar(c, p, name, a.profileColor(p, name), 22, a.live(name), p.card)
+				ui.Column(c).Gap(5).Grow(1).MinWidth(0).Children(func() {
+					ui.Row(c).Gap(8).Children(func() {
+						ui.Text(c, name).FontSize(13).FontWeight(500).TextColor(p.text).SingleLine().Grow(1).Shrink(1).MinWidth(0)
+						ui.Text(c, tokens(total)).FontSize(12).TextColor(p.muted).FontFeatures("tnum").SingleLine().Shrink(0).ContentTransition(numeric)
+					})
+					frac := float32(0)
+					if top > 0 {
+						frac = float32(total) / float32(top)
+					}
+					color := a.profileColor(p, name)
+					track := ui.Box(c).Height(4).Radius(2).Background(p.well)
+					f := track.AnimateTo("f", frac, ui.Smooth) * easeOutCubic(grow(track))
+					track.Draw(func(pt *ui.Painter, r ui.Rect) {
+						if f > 0 {
+							pt.Fill(ui.Rect{X: r.X, Y: r.Y, W: max(r.H, r.W*f), H: r.H}, color, r.H/2)
+						}
+					})
+				})
+			})
+		}
+		if n := len(names) - most; n > 0 {
+			ui.Text(c, locales.MoreProfiles(n)).FontSize(12).TextColor(p.faint).Padding(2, 0, 0)
+		}
+	})
+}
+
+// prevLabel says what the change of a number is measured against.
+func (a *app) prevLabel() string {
+	switch a.rangeIdx {
+	case 0:
+		return locales.ThanPrevDay()
+	case 2:
+		return locales.ThanPrevMonth()
+	}
+	return locales.ThanPrevWeek()
 }
 
 // sessionColor is the color of a project's folder, the same each time.

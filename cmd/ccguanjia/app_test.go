@@ -13,6 +13,7 @@ import (
 
 	"ccguanjia/internal/claude"
 	"ccguanjia/internal/install"
+	"ccguanjia/internal/usage"
 	"ccguanjia/locales"
 )
 
@@ -465,5 +466,94 @@ func TestShortcuts(t *testing.T) {
 	tt.Frame()
 	if !a.newOpen {
 		t.Error("⌘N did not open the new profile dialog")
+	}
+}
+
+func TestChange(t *testing.T) {
+	for _, c := range []struct {
+		cur, prev float64
+		text      string
+		up, ok    bool
+	}{
+		{120, 100, "+20%", true, true},
+		{50, 100, "−50%", false, true},
+		{100, 100, "±0%", true, true},
+		{3000, 100, "30×", true, true},
+		{5, 0, "", false, false},
+	} {
+		text, up, ok := change(c.cur, c.prev)
+		if text != c.text || up != c.up || ok != c.ok {
+			t.Errorf("change(%v, %v) = %q %v %v", c.cur, c.prev, text, up, ok)
+		}
+	}
+}
+
+// The fixture's transcripts were written just now, so the profiles with
+// some are working, and the latest session is live.
+func TestOverviewLive(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 2200)
+	if !a.live("default") || !a.live("work") || a.live("side") {
+		t.Errorf("live: %v", a.active)
+	}
+	if !tt.HasText(locales.Live()) {
+		t.Errorf("no live session in %q", tt.Texts())
+	}
+	if a.byProfile["work"].Tokens.Total() == 0 || a.byProfile["side"].Tokens.Total() != 0 || a.byProfileIdx != a.rangeIdx {
+		t.Errorf("by profile %+v", a.byProfile)
+	}
+	n := len(a.summary.Recent)
+	if n <= recentShown {
+		t.Fatalf("%d recent sessions", n)
+	}
+	if err := tt.Click(locales.ShowAllSessions(n)); err != nil {
+		t.Fatal(err)
+	}
+	if !a.allSessions || !tt.HasText(locales.ShowFewer()) {
+		t.Error("Show All did not show them all")
+	}
+	// A day compares with the day before, which the fixture has.
+	if err := tt.Click(locales.Range24h()); err != nil {
+		t.Fatal(err)
+	}
+	if a.summary.Prev.Replies == 0 {
+		t.Errorf("no previous day: %+v", a.summary.Prev)
+	}
+	if text, _, _ := change(float64(a.summary.Tokens.Total()), float64(a.summary.Prev.Tokens.Total())); !tt.HasText(text) {
+		t.Errorf("no %q in %q", text, tt.Texts())
+	}
+}
+
+func TestPaletteResume(t *testing.T) {
+	a := fixture(t)
+	newTester(a.view, 1320, 940)
+	a.openPalette()
+	a.paletteQuery = locales.ResumeIn("atlas")
+	m := a.paletteMatches()
+	if len(m) == 0 || !strings.HasPrefix(m[0].key, "resume-") {
+		t.Fatalf("matches %+v", m)
+	}
+	m[0].run()
+	if !strings.Contains(a.lastTerminal, " cli run default --resume ") {
+		t.Errorf("resume: %s", a.lastTerminal)
+	}
+}
+
+// The window coming to the front does not walk a folder measured a moment
+// ago; Refresh does.
+func TestStorageFresh(t *testing.T) {
+	a := fixture(t)
+	real := a.storage["default"]
+	if real == nil || real.Total == 0 {
+		t.Fatalf("storage %+v", real)
+	}
+	a.storage["default"] = &usage.Storage{Total: 1}
+	a.loadProfiles()
+	if a.storage["default"].Total != 1 {
+		t.Error("measured again at once")
+	}
+	a.refresh()
+	if a.storage["default"].Total != real.Total {
+		t.Errorf("refresh: %d, want %d", a.storage["default"].Total, real.Total)
 	}
 }

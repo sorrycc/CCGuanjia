@@ -58,6 +58,7 @@ func (a *app) itemsCard(c *ui.Context, p palette, pl *clean.Plan) {
 			ui.Text(c, locales.NothingToClean()).FontSize(13).TextColor(p.muted)
 			return
 		}
+		a.reclaimSummary(c, p, pl)
 		ui.Column(c).Dividers(1, p.border).Gap(1).Children(func() {
 			for _, it := range pl.Items {
 				note := itemNote(it.Rel)
@@ -89,6 +90,41 @@ func (a *app) itemsCard(c *ui.Context, p palette, pl *clean.Plan) {
 			ui.Text(c, locales.VariantsNote(strings.Join(names, ", "), clean.Size(b))).FontSize(12).TextColor(p.muted).LineHeight(1.35)
 		}
 		ui.Text(c, locales.KeptNote()).FontSize(12).TextColor(p.faint).LineHeight(1.35)
+	})
+}
+
+// reclaimSummary is the folder as it is and as the cleanup chosen leaves
+// it, with a bar of the part it removes, which follows the check boxes.
+func (a *app) reclaimSummary(c *ui.Context, p palette, pl *clean.Plan) {
+	st := a.storage[pl.Profile.Name]
+	if st == nil || st.Total <= 0 {
+		return
+	}
+	reclaim := min(pl.Reclaim(), st.Total)
+	ui.Column(c).Gap(10).Padding(0, 0, 6).Children(func() {
+		ui.Row(c).Gap(14).AlignItems(ui.End).Children(func() {
+			side := func(label, value string, color ui.Color) {
+				ui.Column(c).Gap(2).Children(func() {
+					ui.Text(c, label).FontSize(12).TextColor(p.muted).SingleLine()
+					ui.Text(c, value).FontSize(22).FontWeight(700).TextColor(color).FontFeatures("tnum").SingleLine().ContentTransition(numeric)
+				})
+			}
+			side(locales.FolderNow(), clean.Size(st.Total), p.text)
+			ui.Text(c, "→").FontSize(18).TextColor(p.faint).Padding(0, 0, 3)
+			side(locales.AfterCleanup(), clean.Size(st.Total-reclaim), p.green)
+			ui.Box(c).Grow(1)
+			pillIn(ui.Row(c).Margin(0, 0, 4), c, p, iconSparkles, p.amber, "−"+clean.Size(reclaim))
+		})
+		track := ui.Box(c).Height(10).Radius(5).Background(p.well)
+		f := track.AnimateTo("f", float32(float64(reclaim)/float64(st.Total)), ui.Smooth) * easeOutCubic(grow(track))
+		track.Draw(func(pt *ui.Painter, r ui.Rect) {
+			kept := r.W * (1 - f)
+			pt.Fill(ui.Rect{X: r.X, Y: r.Y, W: max(kept, r.H), H: r.H}, p.green.Alpha(0.75), r.H/2)
+			if f > 0 {
+				x := r.X + kept + 2
+				pt.FillGradient(ui.Rect{X: x, Y: r.Y, W: max(r.X+r.W-x, r.H), H: r.H}, ui.LinearGradient{From: p.amber.Alpha(0.7), To: p.amber, Angle: 90}, r.H/2)
+			}
+		})
 	})
 }
 

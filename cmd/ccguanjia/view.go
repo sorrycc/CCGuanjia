@@ -7,6 +7,7 @@ import (
 
 	"ccguanjia/internal/claude"
 	"ccguanjia/internal/clean"
+	"ccguanjia/internal/install"
 	"ccguanjia/locales"
 )
 
@@ -93,7 +94,7 @@ func (a *app) sidebar(c *ui.Context, p palette) {
 	bar := c.TitleBar()
 	ui.Row(c).Height(max(bar.Height, 52)).DragWindow()
 	ui.Scroll(c).Grow(1).Padding(0, 12).Gap(2).Children(func() {
-		a.navItem(c, p, "nav-overview", iconOverview, p.gray, locales.PageOverview(), "", a.page == pageOverview, func() { a.show(pageOverview, "") })
+		a.navItem(c, p, "nav-overview", navIcon(c, iconOverview, p.gray), locales.PageOverview(), "", a.page == pageOverview, func() { a.show(pageOverview, "") })
 
 		a.navSection(c, p, locales.SectionProfiles())
 		for _, pr := range a.profiles {
@@ -103,18 +104,20 @@ func (a *app) sidebar(c *ui.Context, p palette) {
 			} else if !pr.SignedIn {
 				value = locales.SignedOutShort()
 			}
-			color := p.blue
-			if pr.Default {
-				color = p.purple
+			selected := a.page == pageProfile && a.current == pr.Name
+			live := a.live(pr.Name)
+			ring := p.sidebar
+			if selected {
+				ring = p.selected
 			}
+			lead := func(bool) { avatar(c, p, pr.Name, a.profileColor(p, pr.Name), 22, live, ring) }
 			label := pr.Name
 			if a.isDefault(pr.Name) {
-				label += " •"
+				label += " ★"
 			}
-			a.navItem(c, p, "nav-profile-"+pr.Name, iconUser, color, label, value,
-				a.page == pageProfile && a.current == pr.Name, func() { a.show(pageProfile, pr.Name) })
+			a.navItem(c, p, "nav-profile-"+pr.Name, lead, label, value, selected, func() { a.show(pageProfile, pr.Name) })
 		}
-		a.navItem(c, p, "nav-new", iconPlus, p.gray, locales.NewProfile(), "", false, func() {
+		a.navItem(c, p, "nav-new", navIcon(c, iconPlus, p.gray), locales.NewProfile(), "", false, func() {
 			a.resetNew()
 			a.newOpen = true
 		})
@@ -124,16 +127,27 @@ func (a *app) sidebar(c *ui.Context, p palette) {
 		if a.inst != nil && a.inst.Active() != nil {
 			version = a.inst.Active().Version
 		}
-		a.navItem(c, p, "nav-install", iconPackage, p.red, locales.PageInstall(), version, a.page == pageInstall, func() { a.show(pageInstall, "") })
+		if a.updateAvailable() {
+			version = "↑ " + a.latest
+		}
+		a.navItem(c, p, "nav-install", navIcon(c, iconPackage, p.red), locales.PageInstall(), version, a.page == pageInstall, func() { a.show(pageInstall, "") })
 		reclaim := ""
 		if pl := a.plans[a.current]; pl != nil {
 			reclaim = clean.Size(pl.Reclaim())
 		}
-		a.navItem(c, p, "nav-cleanup", iconSparkles, p.amber, locales.PageCleanup(), reclaim, a.page == pageCleanup, func() { a.show(pageCleanup, "") })
+		a.navItem(c, p, "nav-cleanup", navIcon(c, iconSparkles, p.amber), locales.PageCleanup(), reclaim, a.page == pageCleanup, func() { a.show(pageCleanup, "") })
 	})
-	ui.Row(c).Padding(12, 16, 16, 24).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Padding(12, 16, 16, 24).Gap(8).AlignItems(ui.Center).BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
 		ui.Column(c).Gap(2).Grow(1).MinWidth(0).Children(func() {
-			ui.Text(c, "Claude Code").FontSize(13).FontWeight(600).TextColor(p.text).SingleLine()
+			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, "Claude Code").FontSize(13).FontWeight(600).TextColor(p.text).SingleLine()
+				if a.updateAvailable() {
+					u := ui.Row(c.Key("update-badge")).Cursor(ui.CursorPointer).Label(locales.UpdateTo(a.latest)).Tooltip(locales.UpdateTo(a.latest)).
+						Transition(ui.ElementTransition{Enter: &ui.Motion{Scale: 0.6}})
+					u.OnClick(func() { a.show(pageInstall, "") })
+					pillIn(u, c, p, nil, p.orange, locales.UpdateShort())
+				}
+			})
 			sub := locales.Detecting()
 			if a.inst != nil {
 				if in := a.inst.Active(); in != nil {
@@ -152,17 +166,39 @@ func (a *app) sidebar(c *ui.Context, p palette) {
 	})
 }
 
+// updateAvailable reports whether a newer Claude Code than the one that
+// runs is out.
+func (a *app) updateAvailable() bool {
+	if a.inst == nil || a.latest == "" {
+		return false
+	}
+	in := a.inst.Active()
+	return in != nil && in.Version != "" && install.Compare(in.Version, a.latest) < 0
+}
+
 func (a *app) navSection(c *ui.Context, p palette, title string) {
-	ui.Text(c, title).FontSize(12).FontWeight(600).TextColor(p.faint).Padding(16, 10, 6)
+	ui.Text(c, title).FontSize(11).FontWeight(600).LetterSpacing(0.4).TextColor(p.faint).Padding(16, 10, 6)
+}
+
+// navIcon is the lead of a sidebar row: an icon in a square of its color,
+// fading into the highlight when the row is chosen.
+func navIcon(c *ui.Context, icon *ui.SVG, color ui.Color) func(selected bool) {
+	return func(selected bool) {
+		sq := ui.Box(c).Size(22, 22).Radius(6).Background(color).Center().Shrink(0).Transition(quick)
+		if selected {
+			sq.Background(ui.Hex("#ffffff").Alpha(0.25))
+		}
+		sq.Children(func() { ui.Icon(c, icon).Size(13, 13).TextColor(ui.Hex("#ffffff")) })
+	}
 }
 
 // navMatch is the identity of the sidebar's highlight, which glides from
 // the row chosen before to the one chosen now.
 type navMatch struct{}
 
-// navItem is a row of the sidebar: an icon in a square of its color, a
-// label and a value at its end.
-func (a *app) navItem(c *ui.Context, p palette, key string, icon *ui.SVG, color ui.Color, label, value string, selected bool, onClick func()) {
+// navItem is a row of the sidebar: what leads it, a label and a value at
+// its end.
+func (a *app) navItem(c *ui.Context, p palette, key string, lead func(selected bool), label, value string, selected bool, onClick func()) {
 	r := ui.Row(c.Key(key)).Height(34).Radius(8).Cursor(ui.CursorPointer).Label(label).Transition(quick)
 	text, muted := p.text, p.muted
 	switch {
@@ -178,16 +214,13 @@ func (a *app) navItem(c *ui.Context, p palette, key string, icon *ui.SVG, color 
 	r.AnimatePose(pose, ui.Snappy)
 	r.OnClick(onClick).Children(func() {
 		if selected {
-			ui.Box(c.Key("sel")).Absolute().Left(0).Top(0).Right(0).Bottom(0).Radius(8).Background(p.selected).
+			ui.Box(c.Key("sel")).Absolute().Left(0).Top(0).Right(0).Bottom(0).Radius(8).
+				LinearGradient(ui.LinearGradient{From: p.selected.Mix(ui.Hex("#ffffff"), 0.1), To: p.selected, Angle: 180}).
 				Shadow(0, 1, 3, 0, p.selected.Alpha(0.35)).
 				Transition(ui.ElementTransition{Animation: &glide, Match: navMatch{}})
 		}
 		ui.Row(c.Key("content")).Absolute().Left(0).Top(0).Right(0).Bottom(0).Padding(0, 10).Gap(10).AlignItems(ui.Center).Children(func() {
-			sq := ui.Box(c).Size(22, 22).Radius(6).Background(color).Center().Shrink(0).Transition(quick)
-			if selected {
-				sq.Background(p.selText.Alpha(0.25))
-			}
-			sq.Children(func() { ui.Icon(c, icon).Size(13, 13).TextColor(ui.Hex("#ffffff")) })
+			lead(selected)
 			t := ui.Text(c, label).FontSize(14).SingleLine().Grow(1).Shrink(1).MinWidth(0)
 			t.TextColor(t.AnimateColor("col", text, ui.Animation{Duration: 160 * time.Millisecond}))
 			if value != "" {

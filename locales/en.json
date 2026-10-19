@@ -1,5 +1,6 @@
 {
   "@@locale": "en",
+  "afterCleanup": "After cleanup",
   "alsoSignOut": "Also sign out of this profile",
   "alsoStartedBy": "~/.zshrc also starts it with {names}.",
   "@alsoStartedBy": {
@@ -102,6 +103,14 @@
   "copied": "Copied",
   "copy": "Copy",
   "copyID": "Copy Session ID",
+  "copyLauncher": "Copy {command}",
+  "@copyLauncher": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
   "copyServers": "Copy Servers",
   "copyServersFrom": "Copy servers from",
   "copyServersNote": "Adds only the servers this profile doesn't have, in mcpServers of its .claude.json. The rest of the file stays as it is.",
@@ -167,6 +176,7 @@
     }
   },
   "folder": "Folder",
+  "folderGone": "That folder is no longer there.",
   "folderNow": "Folder now",
   "freeSpace": "Free",
   "hoursAgo": "{count, plural, one {# hour ago} other {# hours ago}}",
@@ -218,6 +228,8 @@
   "linkOwn": "This profile has its own, which is kept",
   "linkToMain": "Link to ~/.claude",
   "linkUnlinked": "Not linked",
+  "live": "Live",
+  "liveNote": "Claude Code wrote to this session in the last 5 minutes.",
   "localOnlyNote": "Read from the local .claude.json only. CCGuanjia never reads or sends the sign-in token.",
   "mainFolderNote": "The folder the others link to",
   "mainFolderShared": "This is ~/.claude, which Claude Code uses when CLAUDE_CONFIG_DIR isn't set. The other profiles link their shared items to it.",
@@ -235,6 +247,14 @@
   },
   "models": "Models",
   "more": "More",
+  "moreProfiles": "and {count} more",
+  "@moreProfiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "name": "Name",
   "nativeVersions": "Native Versions",
   "newProfile": "New Profile…",
@@ -399,7 +419,23 @@
     }
   },
   "resume": "Resume",
+  "resumeIn": "Resume {project}",
+  "@resumeIn": {
+    "placeholders": {
+      "project": {
+        "type": "String"
+      }
+    }
+  },
   "resumeNote": "Opens the terminal in the session's folder and resumes it with this profile.",
+  "revealProfile": "Show {name} in Finder",
+  "@revealProfile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "runAnyway": "Run anyway",
   "runs": "runs",
   "scanning": "Looking at the folder…",
@@ -481,12 +517,32 @@
   "shortcutPages": "Overview, Install, Cleanup",
   "shortcutPalette": "Command palette",
   "shortcutStep": "Next or previous profile",
+  "showAllSessions": "Show all {count}",
+  "@showAllSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "showBackup": "Show Backup",
+  "showFewer": "Show fewer",
   "showInFinder": "Show in Finder",
   "signInAgain": "Run the profile's launcher to sign in again.",
   "signInHint": "Not signed in yet: open it in a terminal and sign in once.",
   "signOutNote": "The sign-in isn't backed up: signing in again restores it.",
   "signedIn": "Signed in",
+  "signedInOf": "{signed} of {total} signed in",
+  "@signedInOf": {
+    "placeholders": {
+      "signed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "signedOut": "Signed out",
   "signedOutShort": "signed out",
   "skipPermissions": "Skip permission prompts",
@@ -504,6 +560,9 @@
   "storageByType": "Storage by Type",
   "terminalApp": "Terminal",
   "terminalAppNote": "What Open in Terminal opens.",
+  "thanPrevDay": "Compared with the 24 hours before",
+  "thanPrevMonth": "Compared with the 30 days before",
+  "thanPrevWeek": "Compared with the 7 days before",
   "toArchive": "To archive",
   "tokensByModel": "Tokens by Model",
   "tokensByProject": "Tokens by Project",
@@ -527,6 +586,7 @@
   "upToDate": "Up to date",
   "update": "Update",
   "updateAvailable": "Update available",
+  "updateShort": "Update",
   "updateTo": "{version} available",
   "@updateTo": {
     "placeholders": {
@@ -578,5 +638,6 @@
       }
     }
   },
-  "weekdays": "Sun Mon Tue Wed Thu Fri Sat"
+  "weekdays": "Sun Mon Tue Wed Thu Fri Sat",
+  "whatsNew": "What's New"
 }

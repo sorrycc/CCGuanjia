@@ -29,9 +29,14 @@ func TestShots(t *testing.T) {
 			{"install", pageInstall, "", 860},
 			{"cleanup", pageCleanup, "", 860},
 			{"settings", pageSettings, "", 860},
+			{"palette", pageOverview, "", 860},
 		} {
 			a := fixture(t)
 			a.show(page.page, page.profile)
+			if page.name == "palette" {
+				a.openPalette()
+				a.paletteSel = 2
+			}
 			tt := newTester(a.view, 1240, page.height)
 			tt.SetScale(2)
 			tt.SetDark(dark)

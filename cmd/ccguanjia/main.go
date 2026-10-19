@@ -8,6 +8,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/updater"
@@ -87,8 +88,24 @@ func main() {
 		})
 		a.post = win.Update
 		// What changes outside the app, a sign-in or a profile made in a
-		// terminal, shows as the window comes back to the front.
-		win.OnFocus(func() { a.loadProfiles() })
+		// terminal, shows as the window comes back to the front. While it
+		// is in front, the usage and what works now follow Claude Code
+		// minute by minute.
+		front := true
+		win.OnFocus(func() {
+			front = true
+			a.loadProfiles()
+		})
+		win.OnBlur(func() { front = false })
+		go func() {
+			for range time.Tick(time.Minute) {
+				a.post(func() {
+					if front {
+						a.pulse()
+					}
+				})
+			}
+		}()
 		a.refresh()
 	})
 	if err := mygo.App.Run(); err != nil {
