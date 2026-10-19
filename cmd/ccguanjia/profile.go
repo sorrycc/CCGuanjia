@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"ccguanjia/internal/claude"
@@ -71,7 +72,14 @@ func (a *app) accountCard(c *ui.Context, p palette, pr *claude.Profile) {
 			field(locales.ConfigFile(), a.shortPath(pr.ConfigFile))
 			field(locales.KeychainItem(), pr.KeychainService)
 		})
-		ui.Text(c, locales.LocalOnlyNote()).FontSize(12).TextColor(p.faint).LineHeight(1.35)
+		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, locales.LocalOnlyNote()).FontSize(12).TextColor(p.faint).LineHeight(1.35).Grow(1).Shrink(1).MinWidth(0)
+			ui.Button(c.Key("reveal"), locales.ShowInFinder()).Shrink(0).OnClick(func() {
+				if !a.sync {
+					mygo.Shell.ShowItemInFolder(pr.Dir)
+				}
+			})
+		})
 	})
 }
 
@@ -160,7 +168,7 @@ func (a *app) sharedCard(c *ui.Context, p palette, pr *claude.Profile) {
 }
 
 func (a *app) mcpCard(c *ui.Context, p palette, pr *claude.Profile) {
-	servers := pr.MCPServers()
+	servers := pr.Servers
 	card(c, p, iconServer, p.teal, locales.CardMCP(), locales.ServersCount(len(servers)), nil, func() {
 		if len(servers) == 0 {
 			ui.Text(c, locales.NoServers()).FontSize(13).TextColor(p.muted)
@@ -175,7 +183,7 @@ func (a *app) mcpCard(c *ui.Context, p palette, pr *claude.Profile) {
 		}
 		var others []string
 		for _, q := range a.profiles {
-			if q.Name != pr.Name && len(q.MCPServers()) > 0 {
+			if q.Name != pr.Name && len(q.Servers) > 0 {
 				others = append(others, q.Name)
 			}
 		}

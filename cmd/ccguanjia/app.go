@@ -33,9 +33,9 @@ var ranges = []struct {
 	d       time.Duration
 	buckets int
 }{
-	{24 * time.Hour, 48},
-	{7 * 24 * time.Hour, 56},
-	{30 * 24 * time.Hour, 60},
+	{24 * time.Hour, 24},
+	{7 * 24 * time.Hour, 28},
+	{30 * 24 * time.Hour, 30},
 }
 
 // app is the state of the window: the profiles and what was read of
@@ -70,6 +70,7 @@ type app struct {
 	summaryKey string
 	storage    map[string]*usage.Storage
 	usageGen   int
+	usageDone  int
 
 	// Install. detect finds the installs, the login shell's claude and the
 	// newest version, as installDetect does but for tests.
@@ -95,6 +96,11 @@ type app struct {
 	typed      string
 	cleanRun   *cleanRun
 	cleanReady bool
+	// free is the free space of the backup folder, as last measured, and
+	// when.
+	free     int64
+	freeDir  string
+	freeTime time.Time
 
 	// Profile page.
 	newOpen   bool
@@ -106,8 +112,17 @@ type app struct {
 	mcpFrom   string
 	actionErr string
 
+	// The command palette: what is typed in it, and the row chosen.
+	paletteOpen  bool
+	paletteQuery string
+	paletteSel   int
+	paletteHover string // the row under the pointer
+
 	// toasts waits for the next frame, which shows it.
 	toasts []string
+	// lastTerminal is the command a test would have opened a terminal
+	// with.
+	lastTerminal string
 }
 
 // cleanRun is a cleanup going on, or done.
@@ -152,6 +167,11 @@ func (a *app) do(work func() func()) {
 }
 
 func (a *app) toast(s string) { a.toasts = append(a.toasts, s) }
+
+// busy reports whether something is still being read.
+func (a *app) busy() bool {
+	return !a.loaded || a.instLoading || a.planBusy || a.usageDone != a.usageGen
+}
 
 // profile returns the profile name, nil when there is none.
 func (a *app) profile(name string) *claude.Profile {
@@ -285,6 +305,7 @@ func (a *app) loadUsage() {
 		return func() {
 			if gen == a.usageGen {
 				a.summary, a.summaryKey = &sum, key
+				a.usageDone = gen
 			}
 		}
 	})
@@ -428,6 +449,15 @@ func (a *app) loadPlan(name string) {
 			}
 		}
 	})
+}
+
+// freeSpace is the free space of dir, measured again when dir changes and
+// at most every few seconds, rather than in every frame.
+func (a *app) freeSpace(dir string) int64 {
+	if now := a.now(); dir != a.freeDir || now.Sub(a.freeTime) > 5*time.Second || now.Before(a.freeTime) {
+		a.free, a.freeDir, a.freeTime = clean.FreeSpace(dir), dir, now
+	}
+	return a.free
 }
 
 func (a *app) backupDir() string {

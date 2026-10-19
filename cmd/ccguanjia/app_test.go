@@ -26,6 +26,16 @@ func write(t testing.TB, path, text string) {
 	}
 }
 
+// newTester runs a view as the desktop asking for less motion, so that
+// what the clock of the tester, which stands still, would leave half way
+// in is where it goes at once.
+func newTester(view func(*ui.Context), w, h int) *ui.Tester {
+	tt := ui.NewTester(view, w, h)
+	tt.SetPreferences(ui.Preferences{ReduceMotion: true})
+	tt.Advance(time.Second)
+	return tt
+}
+
 var fixtureNow = time.Date(2026, 10, 19, 16, 0, 0, 0, time.Local)
 
 // fixture is a home of made-up profiles: ~/.claude signed in to a Max
@@ -102,7 +112,7 @@ func fixture(t testing.TB) *app {
 
 func TestOverview(t *testing.T) {
 	a := fixture(t)
-	tt := ui.NewTester(a.view, 1320, 940)
+	tt := newTester(a.view, 1320, 940)
 	for _, want := range []string{locales.PageOverview(), "Max 20x", locales.CardTokens(), "2.1.302", locales.UpdateAvailable(), locales.StorageByType(), "claude-opus-5-5", "work", "side"} {
 		if !tt.HasText(want) {
 			t.Errorf("no %q in %q", want, tt.Texts())
@@ -122,7 +132,7 @@ func TestOverview(t *testing.T) {
 
 func TestProfilePage(t *testing.T) {
 	a := fixture(t)
-	tt := ui.NewTester(a.view, 1320, 940)
+	tt := newTester(a.view, 1320, 940)
 	if err := tt.Click("work"); err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +178,7 @@ func TestProfilePage(t *testing.T) {
 
 func TestNewAndRemoveProfile(t *testing.T) {
 	a := fixture(t)
-	tt := ui.NewTester(a.view, 1320, 940)
+	tt := newTester(a.view, 1320, 940)
 	if err := tt.Click(locales.NewProfile()); err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +221,7 @@ func TestNewAndRemoveProfile(t *testing.T) {
 func TestCleanup(t *testing.T) {
 	a := fixture(t)
 	a.cfg.BackupDir = t.TempDir()
-	tt := ui.NewTester(a.view, 1320, 1400)
+	tt := newTester(a.view, 1320, 1400)
 	tt.Click(locales.PageCleanup())
 	tt.Frame()
 	if a.plans[claude.DefaultName] == nil {
@@ -255,7 +265,7 @@ func TestSignOutNeedsTheName(t *testing.T) {
 	a := fixture(t)
 	a.cfg.BackupDir = t.TempDir()
 	a.show(pageCleanup, "work")
-	tt := ui.NewTester(a.view, 1320, 1400)
+	tt := newTester(a.view, 1320, 1400)
 	if err := tt.Click(locales.AlsoSignOut()); err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +291,7 @@ func TestSignOutNeedsTheName(t *testing.T) {
 
 func TestInstallPage(t *testing.T) {
 	a := fixture(t)
-	tt := ui.NewTester(a.view, 1320, 940)
+	tt := newTester(a.view, 1320, 940)
 	tt.Click(locales.PageInstall())
 	tt.Frame()
 	for _, want := range []string{locales.UpdateTo("2.1.303"), "2.1.288", locales.Current(), locales.InUse(), locales.RemoveVersions(1, "266 MB")} {
@@ -293,7 +303,7 @@ func TestInstallPage(t *testing.T) {
 
 func TestSettingsPage(t *testing.T) {
 	a := fixture(t)
-	tt := ui.NewTester(a.view, 1320, 940)
+	tt := newTester(a.view, 1320, 940)
 	a.show(pageSettings, "")
 	tt.Frame()
 	if err := tt.Click(locales.ShellFile()); err != nil {
@@ -365,7 +375,7 @@ func TestCLI(t *testing.T) {
 func TestChinese(t *testing.T) {
 	a := fixture(t)
 	view := func(c *ui.Context) { a.view(c) }
-	tt := ui.NewTester(view, 1320, 940)
+	tt := newTester(view, 1320, 940)
 	_ = tt
 	if got := locales.In("zh-Hans").PageOverview(); got != "概览" {
 		t.Errorf("zh: %s", got)
@@ -386,5 +396,74 @@ func TestTokens(t *testing.T) {
 	}
 	if n, u := splitNumber("12.3M"); n != "12.3" || u != "M" {
 		t.Error(n, u)
+	}
+}
+
+func TestOverviewActivity(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 2200)
+	for _, want := range []string{locales.CardActivity(), locales.TokensByProject(), locales.CardRecent(), "atlas", locales.Resume()} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	if len(a.summary.Recent) == 0 {
+		t.Fatal("no recent sessions")
+	}
+	s := a.summary.Recent[0]
+	if err := a.resumeSession("work", s); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(a.lastTerminal, " cli run work --resume '"+s.ID+"'") {
+		t.Errorf("resume: %s", a.lastTerminal)
+	}
+}
+
+func TestPalette(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 940)
+	tt.Key(ui.Cmd, ui.KeyK)
+	if !a.paletteOpen {
+		t.Fatal("⌘K did not open the palette")
+	}
+	tt.Type("work")
+	tt.Frame()
+	if m := a.paletteMatches(); len(m) == 0 || m[0].key != "profile-work" {
+		t.Fatalf("matches for work: %+v", m)
+	}
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if a.paletteOpen || a.page != pageProfile || a.current != "work" {
+		t.Errorf("palette %v, page %s %s", a.paletteOpen, a.page, a.current)
+	}
+	// The arrows choose, and Return runs what they chose.
+	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Type("instal")
+	tt.Frame()
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if a.page != pageInstall {
+		t.Errorf("page %s", a.page)
+	}
+	if got := matchScore("ovw", command{title: "Overview"}); got == 0 {
+		t.Error("letters in order do not match")
+	}
+	if got := matchScore("xyz", command{title: "Overview"}); got != 0 {
+		t.Error("matched letters not there")
+	}
+}
+
+func TestShortcuts(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 940)
+	tt.Key(ui.Cmd|ui.Alt, ui.KeyDown)
+	tt.Frame()
+	if a.current != "side" {
+		t.Errorf("next profile: %s", a.current)
+	}
+	tt.Key(ui.Cmd, ui.KeyN)
+	tt.Frame()
+	if !a.newOpen {
+		t.Error("⌘N did not open the new profile dialog")
 	}
 }

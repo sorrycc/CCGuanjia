@@ -23,9 +23,18 @@
   "backupOrder": "Config is copied out, projects/ and file-history/ are archived and verified, and only then is anything edited or deleted. Signing out comes last.",
   "backupSize": "Backup",
   "badName": "Use lowercase letters, digits, - and _.",
+  "busiest": "Busiest {when}",
+  "@busiest": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "cached": "Cached",
   "cancel": "Cancel",
   "cardAccount": "Account",
+  "cardActivity": "Activity by Hour",
   "cardBackup": "Backup",
   "cardGeneral": "General",
   "cardInstall": "Install",
@@ -33,11 +42,13 @@
   "cardMCP": "MCP Servers",
   "cardPrinciples": "What CCGuanjia Does",
   "cardProfiles": "Profiles",
+  "cardRecent": "Recent Sessions",
   "cardRemove": "Remove",
   "cardRemoves": "Archive and Delete",
   "cardSessions": "Sessions",
   "cardShared": "Shared with ~/.claude",
   "cardShell": "Shell",
+  "cardShortcuts": "Keyboard Shortcuts",
   "cardSignOut": "Sign Out",
   "cardStorage": "Storage",
   "cardTokens": "Tokens",
@@ -86,9 +97,11 @@
       }
     }
   },
+  "commandPalette": "Command Palette…",
   "configFile": "Config file",
   "copied": "Copied",
   "copy": "Copy",
+  "copyID": "Copy Session ID",
   "copyServers": "Copy Servers",
   "copyServersFrom": "Copy servers from",
   "copyServersNote": "Adds only the servers this profile doesn't have, in mcpServers of its .claude.json. The rest of the file stays as it is.",
@@ -102,6 +115,14 @@
     }
   },
   "current": "current",
+  "daysAgo": "{count, plural, one {# day ago} other {# days ago}}",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "defaultForShells": "Default for new shells",
   "defaultForShellsNote": "With the shell file, a new shell sets CLAUDE_CONFIG_DIR to this profile, so plain claude uses it.",
   "defaultProfile": "Default",
@@ -148,6 +169,14 @@
   "folder": "Folder",
   "folderNow": "Folder now",
   "freeSpace": "Free",
+  "hoursAgo": "{count, plural, one {# hour ago} other {# hours ago}}",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "inAll": "in all",
   "inUse": "in use",
   "input": "Input",
@@ -163,6 +192,7 @@
       }
     }
   },
+  "justNow": "just now",
   "keptNote": "Never touched: skills, plugins, hooks, CLAUDE.md, history.jsonl, and anything that is a link.",
   "keychainItem": "Keychain item",
   "kindNative": "native",
@@ -174,6 +204,7 @@
   "last7d": "In the last 7 days",
   "latest": "Latest",
   "launcher": "Launcher",
+  "less": "Less",
   "linkElsewhere": "Links to {target}. Turning it on links it to ~/.claude.",
   "@linkElsewhere": {
     "placeholders": {
@@ -194,16 +225,27 @@
   "menuSettings": "Settings",
   "menuView": "View",
   "method": "Method",
+  "minutesAgo": "{count, plural, one {# min ago} other {# min ago}}",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "models": "Models",
+  "more": "More",
   "name": "Name",
   "nativeVersions": "Native Versions",
   "newProfile": "New Profile…",
   "newProfileNote": "A profile is a ~/.claude-<name> folder with its own sign-in and history, for another account of yours. Claude Code uses it through CLAUDE_CONFIG_DIR.",
+  "noMatches": "Nothing matches.",
   "noNativeVersions": "The native installer keeps no versions here.",
   "noNewServers": "No new servers to copy",
   "noProjects": "No projects yet.",
   "noReplies": "No replies in this time.",
   "noServers": "No MCP servers in this profile's .claude.json.",
+  "noSessions": "No sessions in this window.",
   "noSettings": "This profile has no settings.json.",
   "noUpdateCommand": "This install has no official update command.",
   "noneFound": "None found.",
@@ -246,12 +288,21 @@
   "onThisMac": "On this Mac",
   "open": "Open",
   "openInTerminal": "Open in Terminal",
+  "openProfile": "Open profile {name}",
+  "@openProfile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "organization": "Organization",
   "other": "Other",
   "output": "Output",
   "pageCleanup": "Cleanup",
   "pageInstall": "Install",
   "pageOverview": "Overview",
+  "paletteHint": "↑↓ to choose · ↩ to run · esc to close",
   "phaseArchive": "Archive",
   "phaseBackup": "Copy config",
   "phaseDelete": "Delete",
@@ -339,9 +390,20 @@
   },
   "removed": "Removed",
   "replies": "Replies",
+  "repliesCount": "{count, plural, one {# reply} other {# replies}}",
+  "@repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resume": "Resume",
+  "resumeNote": "Opens the terminal in the session's folder and resumes it with this profile.",
   "runAnyway": "Run anyway",
   "runs": "runs",
   "scanning": "Looking at the folder…",
+  "searchCommands": "Search pages, profiles and actions",
   "sectionMaintenance": "Maintenance",
   "sectionProfiles": "Profiles",
   "serversCopied": "{count, plural, one {Copied # server} other {Copied # servers}}",
@@ -416,7 +478,11 @@
   "shellOff": "Shell off",
   "shellOn": "Shell on",
   "shellReload": "New terminals pick it up; run exec zsh in open ones.",
+  "shortcutPages": "Overview, Install, Cleanup",
+  "shortcutPalette": "Command palette",
+  "shortcutStep": "Next or previous profile",
   "showBackup": "Show Backup",
+  "showInFinder": "Show in Finder",
   "signInAgain": "Run the profile's launcher to sign in again.",
   "signInHint": "Not signed in yet: open it in a terminal and sign in once.",
   "signOutNote": "The sign-in isn't backed up: signing in again restores it.",
@@ -425,6 +491,14 @@
   "signedOutShort": "signed out",
   "skipPermissions": "Skip permission prompts",
   "skipPermissionsNote": "Adds --dangerously-skip-permissions to cc-<name>. Claude Code then runs every tool without asking.",
+  "startProfile": "Start {name} in Terminal",
+  "@startProfile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "stop": "Stop",
   "storageByProject": "Storage by Project",
   "storageByType": "Storage by Type",
@@ -432,6 +506,7 @@
   "terminalAppNote": "What Open in Terminal opens.",
   "toArchive": "To archive",
   "tokensByModel": "Tokens by Model",
+  "tokensByProject": "Tokens by Project",
   "tokensInAll": "{count} in all",
   "@tokensInAll": {
     "placeholders": {
@@ -502,5 +577,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "weekdays": "Sun Mon Tue Wed Thu Fri Sat"
 }

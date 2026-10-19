@@ -148,11 +148,13 @@ func (a *app) settingsEditsCard(c *ui.Context, p palette, pl *clean.Plan) {
 			from = fmt.Sprint(s.CleanupDays)
 		}
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			ui.Checkbox(c.Key("days"), &o.SetCleanupDays, "cleanupPeriodDays").Grow(1)
-			days := float64(o.CleanupDays)
-			if ui.NumberInput(c.Key("days-n"), &days, 1, 3650, 1).Label("cleanupPeriodDays").Width(80).Disabled(!o.SetCleanupDays).Changed() {
-				o.CleanupDays = int(days)
-			}
+			ui.Checkbox(c.Key("days"), &o.SetCleanupDays, "cleanupPeriodDays").Grow(1).Shrink(1).MinWidth(0)
+			ui.Row(c).Gap(6).AlignItems(ui.Center).Shrink(0).Children(func() {
+				days := float64(o.CleanupDays)
+				if ui.NumberInput(c.Key("days-n"), &days, 1, 3650, 1).Label("cleanupPeriodDays").Width(150).Disabled(!o.SetCleanupDays).Changed() {
+					o.CleanupDays = int(days)
+				}
+			})
 		})
 		diff(c, p, fmt.Sprintf("cleanupPeriodDays: %s → %d", from, o.CleanupDays), o.SetCleanupDays && s.CleanupDays != o.CleanupDays)
 		ui.Text(c, locales.CleanupDaysNote()).FontSize(12).TextColor(p.faint).LineHeight(1.35)
@@ -221,7 +223,7 @@ func (a *app) backupCard(c *ui.Context, p palette, pl *clean.Plan) {
 			})
 			ui.Button(c.Key("choose-backup"), locales.Choose()).OnClick(a.chooseBackupDir)
 		})
-		free := clean.FreeSpace(o.BackupDir)
+		free := a.freeSpace(o.BackupDir)
 		need := pl.SpaceNeeded()
 		stats(c, p,
 			stat{locales.ToArchive(), clean.Size(pl.ArchiveBytes())},
@@ -334,6 +336,7 @@ func (a *app) cleanProgress(c *ui.Context, p palette, run *cleanRun) {
 				})
 			}
 		})
+		progressBar(c, p, color, cleanFraction(run, a.cleanOpts.SignOut))
 		if !run.done {
 			if run.progress.Item != "" {
 				mono(c, p, run.progress.Item)
@@ -366,6 +369,40 @@ func (a *app) cleanProgress(c *ui.Context, p palette, run *cleanRun) {
 			}
 			ui.Button(c.Key("done"), locales.Done()).OnClick(func() { a.cleanRun = nil; a.loadPlan(a.current) })
 		})
+	})
+}
+
+// cleanFraction is how far along a cleanup is, from 0 to 1: the phases
+// done, and the part of the one going on.
+func cleanFraction(run *cleanRun, signOut bool) float64 {
+	shown := 0
+	at := 0.0
+	for _, ph := range phases() {
+		if ph.phase == clean.PhaseSignOut && !signOut {
+			continue
+		}
+		switch {
+		case run.progress.Phase > ph.phase:
+			at++
+		case run.progress.Phase == ph.phase && run.progress.Total > 0:
+			at += float64(run.progress.N) / float64(run.progress.Total)
+		}
+		shown++
+	}
+	if run.done && run.err == nil || shown == 0 {
+		return 1
+	}
+	return at / float64(shown)
+}
+
+// progressBar is a bar going smoothly to frac, from 0 to 1.
+func progressBar(c *ui.Context, p palette, color ui.Color, frac float64) {
+	track := ui.Box(c).Height(6).Radius(3).Background(p.well)
+	f := track.AnimateTo("f", float32(frac), ui.Smooth)
+	track.Draw(func(pt *ui.Painter, r ui.Rect) {
+		if f > 0 {
+			pt.FillGradient(ui.Rect{X: r.X, Y: r.Y, W: max(r.H, r.W*f), H: r.H}, ui.LinearGradient{From: color.Alpha(0.7), To: color, Angle: 90}, r.H/2)
+		}
 	})
 }
 

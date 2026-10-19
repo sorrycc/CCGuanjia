@@ -51,6 +51,20 @@ func TestScan(t *testing.T) {
 	if sum.Buckets[23] != 18 || sum.Buckets[22] != 13 || sum.Buckets[4] != 153 {
 		t.Errorf("buckets %v", sum.Buckets)
 	}
+	// The sessions, the latest first, with the model of most tokens.
+	if len(sum.Recent) != 2 || sum.Recent[0].ID != "s-/a" || sum.Recent[0].Replies != 2 || sum.Recent[0].Model != "claude-haiku" ||
+		!sum.Recent[0].Last.Equal(now.Add(-time.Hour)) || sum.Recent[1].Project != "/b" || sum.Recent[1].Tokens != 13 {
+		t.Errorf("recent %+v", sum.Recent)
+	}
+	hours := int64(0)
+	for _, day := range sum.Hours {
+		for _, n := range day {
+			hours += n
+		}
+	}
+	if at := now.Add(-time.Hour).Local(); hours != 3 || sum.Hours[at.Weekday()][at.Hour()] != 1 {
+		t.Errorf("hours %v", sum.Hours)
+	}
 	// A wider window, from the cache.
 	if got := s.Scan(dir, now.Add(-72*time.Hour), now, 3); got.Tokens.Input != 1117 {
 		t.Errorf("72h %+v", got.Tokens)

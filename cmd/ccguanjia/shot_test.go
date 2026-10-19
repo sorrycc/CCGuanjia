@@ -5,8 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/egoist/mygo/ui"
+	"time"
 )
 
 // TestShots draws every page of the fixture, dark and light, into the
@@ -20,20 +19,25 @@ func TestShots(t *testing.T) {
 	}
 	os.MkdirAll(dir, 0o755)
 	for _, dark := range []bool{true, false} {
-		for _, page := range []struct{ name, page, profile string }{
-			{"overview", pageOverview, ""},
-			{"profile", pageProfile, "work"},
-			{"install", pageInstall, ""},
-			{"cleanup", pageCleanup, ""},
-			{"settings", pageSettings, ""},
+		for _, page := range []struct {
+			name, page, profile string
+			height              int
+		}{
+			{"overview", pageOverview, "", 860},
+			{"overview-full", pageOverview, "", 1720},
+			{"profile", pageProfile, "work", 860},
+			{"install", pageInstall, "", 860},
+			{"cleanup", pageCleanup, "", 860},
+			{"settings", pageSettings, "", 860},
 		} {
 			a := fixture(t)
 			a.show(page.page, page.profile)
-			tt := ui.NewTester(a.view, 1240, 860)
+			tt := newTester(a.view, 1240, page.height)
 			tt.SetScale(2)
 			tt.SetDark(dark)
 			tt.Frame()
-			tt.Frame()
+			// Colors and content fade across even with less motion.
+			tt.Advance(2 * time.Second)
 			name := page.name + "-light.png"
 			if dark {
 				name = page.name + "-dark.png"

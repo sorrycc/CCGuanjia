@@ -103,6 +103,25 @@ func (a *app) settingsPage(c *ui.Context, p palette) {
 					ui.Button(c.Key("github"), locales.Open()).OnClick(func() { c.OpenURL(homepage) })
 				})
 			})
+			card(c, p, iconCommand, p.blue, locales.CardShortcuts(), "", nil, func() {
+				ui.Column(c).Dividers(1, p.border).Gap(1).Children(func() {
+					for _, sc := range []struct{ name, keys string }{
+						{locales.ShortcutPalette(), "⌘ K"},
+						{locales.NewProfile(), "⌘ N"},
+						{locales.ShortcutPages(), "⌘ 1 · 2 · 3"},
+						{locales.ShortcutStep(), "⌥ ⌘ ↓ ↑"},
+						{locales.Refresh(), "⌘ R"},
+						{locales.MenuSettings(), "⌘ ,"},
+					} {
+						ui.Row(c).Gap(12).AlignItems(ui.Center).Padding(8, 0).Children(func() {
+							ui.Text(c, sc.name).FontSize(13).TextColor(p.text).Grow(1).Shrink(1).MinWidth(0).SingleLine()
+							ui.Box(c).Padding(3, 8).Radius(6).Background(p.well).BorderWidth(1).BorderColor(p.border).Shrink(0).Children(func() {
+								ui.Text(c, sc.keys).FontSize(12).FontWeight(600).TextColor(p.muted)
+							})
+						})
+					}
+				})
+			})
 			card(c, p, iconShield, p.blue, locales.CardPrinciples(), "", nil, func() {
 				for _, s := range []string{locales.Principle1(), locales.Principle2(), locales.Principle3(), locales.Principle4()} {
 					ui.Row(c).Gap(8).Children(func() {

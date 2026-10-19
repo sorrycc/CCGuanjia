@@ -115,6 +115,14 @@ func (a *app) setMenu() {
 			{Label: locales.PageInstall(), Accelerator: "Cmd+2", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(func() { a.show(pageInstall, "") }) }},
 			{Label: locales.PageCleanup(), Accelerator: "Cmd+3", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(func() { a.show(pageCleanup, "") }) }},
 			mygo.Separator(),
+			{Label: locales.CommandPalette(), Accelerator: "Cmd+K", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(a.openPalette) }},
+			{Label: locales.NewProfile(), Accelerator: "Cmd+N", Click: func(*mygo.MenuItem, *mygo.Window) {
+				a.post(func() {
+					a.resetNew()
+					a.newOpen = true
+				})
+			}},
+			mygo.Separator(),
 			{Label: locales.Refresh(), Accelerator: "Cmd+R", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(a.refresh) }},
 		}},
 		{Role: mygo.RoleWindowMenu},

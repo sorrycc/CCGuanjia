@@ -30,8 +30,11 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
   Ghostty), or with `ccgj run <name>`. Each one runs on its own sign-in, with the `ANTHROPIC_*` variables that would
   point it elsewhere cleared. Your own lines in `~/.zshrc` stay as they are: CCGuanjia adds one line that sources
   its own file.
-- **Overview.** Tokens, sessions and models from the transcripts over 24 hours, 7 days or 30 days, what each folder
-  takes by type and by project, and how Claude Code is installed.
+- **Overview.** Tokens, sessions and models from the transcripts over 24 hours, 7 days or 30 days, a heatmap of the
+  hours you work, tokens by project, what each folder takes by type and by project, and how Claude Code is installed.
+- **Recent sessions.** The sessions active last, each with its folder, model and size, and **Resume**, which opens
+  the terminal in its folder and resumes it with the profile.
+- **Command palette.** ⌘K goes to any page or profile, starts a profile in the terminal, or makes a new one.
 - **Install.** Finds the native installer, npm, Homebrew or Bun, and updates or reinstalls through that method's
   official command. It warns when there are several installs or `claude` is a shell function, and removes the native
   installer's old versions that are neither current nor running.

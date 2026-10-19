@@ -72,6 +72,27 @@ type Summary struct {
 	// Models and Projects are the tokens of each, most first.
 	Models   []Share
 	Projects []Share
+	// Hours counts the replies of each hour of the week, in local time:
+	// Hours[weekday][hour], Sunday first, as time.Weekday has them.
+	Hours [7][24]int64
+	// Recent are the sessions of the window, the latest active first, at
+	// most RecentSessions of them.
+	Recent []Session
+}
+
+// RecentSessions is how many sessions Summary.Recent keeps.
+const RecentSessions = 8
+
+// Session is a conversation of a transcript, over the window.
+type Session struct {
+	ID string
+	// Project is the folder it ran in.
+	Project     string
+	First, Last time.Time
+	Replies     int
+	Tokens      int64
+	// Model is the model of most of its tokens.
+	Model string
 }
 
 // Share is the tokens of a model or a project.
@@ -111,7 +132,7 @@ func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 	sum := Summary{Since: since, Until: now, Buckets: make([]int64, max(n, 1)), Counts: make([]int64, max(n, 1))}
 	span := now.Sub(since).Seconds() / float64(len(sum.Buckets))
 	seen := map[string]bool{}
-	sessions := map[string]bool{}
+	sessions := map[string]*sessionAcc{}
 	models := map[string]int64{}
 	projects := map[string]int64{}
 	from, to := since.Unix(), now.Unix()
@@ -131,7 +152,14 @@ func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 			}
 			sum.Tokens.add(e.tokens)
 			sum.Replies++
-			sessions[e.session] = true
+			sa := sessions[e.session]
+			if sa == nil {
+				sa = &sessionAcc{Session: Session{ID: e.session, Project: e.project}, first: e.at, last: e.at, models: map[string]int64{}}
+				sessions[e.session] = sa
+			}
+			sa.add(e)
+			t := time.Unix(e.at, 0)
+			sum.Hours[t.Weekday()][t.Hour()]++
 			models[e.model] += e.tokens.Total()
 			projects[e.project] += e.tokens.Total()
 			i := int(float64(e.at-from) / span)
@@ -141,9 +169,50 @@ func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 		}
 	}
 	sum.Sessions = len(sessions)
+	sum.Recent = recent(sessions, RecentSessions)
 	sum.Models = shares(models)
 	sum.Projects = shares(projects)
 	return sum
+}
+
+// sessionAcc sums the replies of a session.
+type sessionAcc struct {
+	Session
+	first, last int64
+	models      map[string]int64
+}
+
+func (s *sessionAcc) add(e entry) {
+	s.Replies++
+	s.Tokens += e.tokens.Total()
+	s.models[e.model] += e.tokens.Total()
+	s.first, s.last = min(s.first, e.at), max(s.last, e.at)
+	if e.at == s.last && e.project != "" {
+		s.Project = e.project
+	}
+}
+
+// recent are the n sessions active last.
+func recent(m map[string]*sessionAcc, n int) []Session {
+	out := make([]Session, 0, len(m))
+	for _, sa := range m {
+		s := sa.Session
+		s.First, s.Last = time.Unix(sa.first, 0), time.Unix(sa.last, 0)
+		if ms := shares(sa.models); len(ms) > 0 {
+			s.Model = ms[0].Name
+		}
+		out = append(out, s)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].Last.Equal(out[j].Last) {
+			return out[i].Last.After(out[j].Last)
+		}
+		return out[i].ID < out[j].ID
+	})
+	if len(out) > n {
+		out = out[:n]
+	}
+	return out
 }
 
 func shares(m map[string]int64) []Share {

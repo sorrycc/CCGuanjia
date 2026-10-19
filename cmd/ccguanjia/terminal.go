@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
 	"ccguanjia/internal/shell"
+	"ccguanjia/internal/usage"
 )
 
 // launchCommand is the shell command that runs Claude Code with the
@@ -22,6 +24,20 @@ func (a *app) launchCommand(name string) string {
 // the profile name.
 func (a *app) openTerminal(name string) error {
 	return openTerminal(a.cfg.TerminalApp(), a.launchCommand(name))
+}
+
+// resumeSession opens the terminal in the folder of a session, resuming
+// it with the profile name.
+func (a *app) resumeSession(name string, s usage.Session) error {
+	cmd := a.launchCommand(name) + " --resume " + shell.Quote(s.ID)
+	if fi, err := os.Stat(s.Project); err == nil && fi.IsDir() {
+		cmd = "cd " + shell.Quote(s.Project) + " && " + cmd
+	}
+	if a.sync {
+		a.lastTerminal = cmd
+		return nil
+	}
+	return openTerminal(a.cfg.TerminalApp(), cmd)
 }
 
 func openTerminal(app, command string) error {

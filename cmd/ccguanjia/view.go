@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/egoist/mygo/ui"
 
 	"ccguanjia/internal/claude"
@@ -47,6 +49,43 @@ func (a *app) view(c *ui.Context) {
 		})
 	})
 	a.newProfileDialog(c, p)
+	a.palette(c, p)
+	a.shortcuts(c)
+}
+
+// shortcuts are the keys of the window. The View menu has ⌘K and ⌘N as
+// well, and takes them first in the app.
+func (a *app) shortcuts(c *ui.Context) {
+	switch {
+	case c.Shortcut(ui.Cmd, ui.KeyK):
+		a.openPalette()
+	case c.Shortcut(ui.Cmd, ui.KeyN):
+		a.resetNew()
+		a.newOpen = true
+	case c.Shortcut(ui.Cmd|ui.Alt, ui.KeyDown):
+		a.stepProfile(1)
+	case c.Shortcut(ui.Cmd|ui.Alt, ui.KeyUp):
+		a.stepProfile(-1)
+	}
+}
+
+// stepProfile shows the profile after the current one, or before it.
+func (a *app) stepProfile(d int) {
+	if len(a.profiles) == 0 {
+		return
+	}
+	i := 0
+	for j, pr := range a.profiles {
+		if pr.Name == a.current {
+			i = j
+		}
+	}
+	i = (i + d + len(a.profiles)) % len(a.profiles)
+	page := a.page
+	if page != pageOverview && page != pageCleanup {
+		page = pageProfile
+	}
+	a.show(page, a.profiles[i].Name)
 }
 
 // sidebar is the pages, the profiles, and the version of Claude Code.
@@ -117,28 +156,45 @@ func (a *app) navSection(c *ui.Context, p palette, title string) {
 	ui.Text(c, title).FontSize(12).FontWeight(600).TextColor(p.faint).Padding(16, 10, 6)
 }
 
+// navMatch is the identity of the sidebar's highlight, which glides from
+// the row chosen before to the one chosen now.
+type navMatch struct{}
+
 // navItem is a row of the sidebar: an icon in a square of its color, a
 // label and a value at its end.
 func (a *app) navItem(c *ui.Context, p palette, key string, icon *ui.SVG, color ui.Color, label, value string, selected bool, onClick func()) {
-	r := ui.Row(c.Key(key)).Height(34).Padding(0, 10).Gap(10).Radius(8).AlignItems(ui.Center).Cursor(ui.CursorPointer).Label(label)
+	r := ui.Row(c.Key(key)).Height(34).Radius(8).Cursor(ui.CursorPointer).Label(label).Transition(quick)
 	text, muted := p.text, p.muted
 	switch {
 	case selected:
-		r.Background(p.selected)
 		text, muted = p.selText, p.selText.Alpha(0.8)
 	case r.Hovered():
-		r.Background(p.text.Alpha(0.06))
+		r.Background(p.hover())
 	}
+	pose := ui.Pose{}
+	if r.Pressed() {
+		pose.Scale = 0.98
+	}
+	r.AnimatePose(pose, ui.Snappy)
 	r.OnClick(onClick).Children(func() {
-		sq := ui.Box(c).Size(22, 22).Radius(6).Background(color).Center().Shrink(0)
 		if selected {
-			sq.Background(p.selText.Alpha(0.25))
+			ui.Box(c.Key("sel")).Absolute().Left(0).Top(0).Right(0).Bottom(0).Radius(8).Background(p.selected).
+				Shadow(0, 1, 3, 0, p.selected.Alpha(0.35)).
+				Transition(ui.ElementTransition{Animation: &glide, Match: navMatch{}})
 		}
-		sq.Children(func() { ui.Icon(c, icon).Size(13, 13).TextColor(ui.Hex("#ffffff")) })
-		ui.Text(c, label).FontSize(14).TextColor(text).SingleLine().Grow(1)
-		if value != "" {
-			ui.Text(c, value).FontSize(12).TextColor(muted).FontFeatures("tnum").SingleLine()
-		}
+		ui.Row(c.Key("content")).Absolute().Left(0).Top(0).Right(0).Bottom(0).Padding(0, 10).Gap(10).AlignItems(ui.Center).Children(func() {
+			sq := ui.Box(c).Size(22, 22).Radius(6).Background(color).Center().Shrink(0).Transition(quick)
+			if selected {
+				sq.Background(p.selText.Alpha(0.25))
+			}
+			sq.Children(func() { ui.Icon(c, icon).Size(13, 13).TextColor(ui.Hex("#ffffff")) })
+			t := ui.Text(c, label).FontSize(14).SingleLine().Grow(1).Shrink(1).MinWidth(0)
+			t.TextColor(t.AnimateColor("col", text, ui.Animation{Duration: 160 * time.Millisecond}))
+			if value != "" {
+				v := ui.Text(c, value).FontSize(12).FontFeatures("tnum").SingleLine().Shrink(0)
+				v.TextColor(v.AnimateColor("col", muted, ui.Animation{Duration: 160 * time.Millisecond}))
+			}
+		})
 	})
 }
 
@@ -169,9 +225,9 @@ func (a *app) header(c *ui.Context, p palette) {
 	}
 	ui.Row(c).Height(max(bar.Height, 52)+20).Padding(0, 24, 0, 28).Gap(12).AlignItems(ui.Center).DragWindow().Children(func() {
 		ui.Column(c).Gap(1).Grow(1).MinWidth(0).Children(func() {
-			ui.Text(c, title).FontSize(20).FontWeight(700).TextColor(p.text).SingleLine()
+			ui.Text(c, title).FontSize(21).FontWeight(700).LetterSpacing(-0.3).TextColor(p.text).SingleLine().ContentTransition(ui.ContentTransition{})
 			if sub != "" {
-				ui.Text(c, sub).FontSize(12).TextColor(p.muted).SingleLine()
+				ui.Text(c, sub).FontSize(12).TextColor(p.muted).SingleLine().ContentTransition(ui.ContentTransition{})
 			}
 		})
 		if (a.page == pageOverview || a.page == pageCleanup) && len(a.profiles) > 1 {
@@ -186,7 +242,8 @@ func (a *app) header(c *ui.Context, p palette) {
 				a.setRange(i)
 			}
 		}
-		iconButton(c.Key("refresh"), p, iconRefresh, locales.Refresh()).OnClick(a.refresh)
+		iconButton(c.Key("palette"), p, iconCommand, locales.CommandPalette()+"  ⌘K").OnClick(a.openPalette)
+		spinButton(c.Key("refresh"), p, iconRefresh, locales.Refresh(), a.busy()).OnClick(a.refresh)
 	})
 }
 

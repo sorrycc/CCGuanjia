@@ -93,6 +93,9 @@ type Profile struct {
 	SignedIn bool
 	// Links are the states of the shared items in it.
 	Links []Link
+	// Servers are the names of the MCP servers of its .claude.json, as
+	// Load read them, sorted.
+	Servers []string
 }
 
 // Account is what .claude.json says of the account signed in. It comes
@@ -167,7 +170,7 @@ func (e *Env) Load(name string) *Profile {
 		p.ConfigFile = filepath.Join(p.Dir, ".claude.json")
 	}
 	p.KeychainService = KeychainService(p.Dir, p.Default)
-	p.Account = readAccount(p.ConfigFile)
+	p.Account, p.Servers = readConfig(p.ConfigFile)
 	p.SignedIn = e.signedIn(p)
 	p.Links = e.links(p)
 	return p
@@ -194,15 +197,17 @@ func (e *Env) signedIn(p *Profile) bool {
 	return ok
 }
 
-func readAccount(path string) *Account {
-	data, err := os.ReadFile(path)
+// readConfig reads the account and the names of the MCP servers of a
+// .claude.json, which can be large, in one pass.
+func readConfig(path string) (*Account, []string) {
+	o, err := readObject(path)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
-	o, err := jsonedit.Parse(data)
-	if err != nil {
-		return nil
-	}
+	return accountOf(o), serversOf(o)
+}
+
+func accountOf(o *jsonedit.Object) *Account {
 	var raw struct {
 		Email     string `json:"emailAddress"`
 		Display   string `json:"displayName"`
@@ -425,6 +430,10 @@ func (p *Profile) MCPServers() []string {
 	if err != nil {
 		return nil
 	}
+	return serversOf(o)
+}
+
+func serversOf(o *jsonedit.Object) []string {
 	servers, err := subObject(o, "mcpServers")
 	if err != nil || servers == nil {
 		return nil
