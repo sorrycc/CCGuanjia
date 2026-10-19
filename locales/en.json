@@ -1,0 +1,506 @@
+{
+  "@@locale": "en",
+  "alsoSignOut": "Also sign out of this profile",
+  "alsoStartedBy": "~/.zshrc also starts it with {names}.",
+  "@alsoStartedBy": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "andSignIn": "{size} and the sign-in",
+  "@andSignIn": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "archivedFirst": "archived first",
+  "backUpAndClean": "Back Up and Clean",
+  "backUpAndCleanButton": "Back Up and Clean…",
+  "backupOrder": "Config is copied out, projects/ and file-history/ are archived and verified, and only then is anything edited or deleted. Signing out comes last.",
+  "backupSize": "Backup",
+  "badName": "Use lowercase letters, digits, - and _.",
+  "cached": "Cached",
+  "cancel": "Cancel",
+  "cardAccount": "Account",
+  "cardBackup": "Backup",
+  "cardGeneral": "General",
+  "cardInstall": "Install",
+  "cardLaunch": "Launch",
+  "cardMCP": "MCP Servers",
+  "cardPrinciples": "What CCGuanjia Does",
+  "cardProfiles": "Profiles",
+  "cardRemove": "Remove",
+  "cardRemoves": "Archive and Delete",
+  "cardSessions": "Sessions",
+  "cardShared": "Shared with ~/.claude",
+  "cardShell": "Shell",
+  "cardSignOut": "Sign Out",
+  "cardStorage": "Storage",
+  "cardTokens": "Tokens",
+  "checkForUpdates": "Check for Updates…",
+  "choose": "Choose…",
+  "chooseBackupFolder": "Choose a Folder for Backups",
+  "claudeRunning": "{count, plural, one {Claude Code is running (# process).} other {Claude Code is running (# processes).}} Quit it first: cleaning a session's transcript while it is open can fail.",
+  "@claudeRunning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cleanDetail": "This removes {what} after backing up to {folder}. Deleted files can only come back from the backup.",
+  "@cleanDetail": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      },
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanDone": "Cleaned",
+  "cleanFailed": "Cleanup Stopped",
+  "cleanQuestion": "Back up and clean “{name}”?",
+  "@cleanQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cleaning": "Cleaning…",
+  "cleanupDaysNote": "How many days Claude Code keeps transcripts before it deletes them itself.",
+  "command": "Command",
+  "commandDone": "Done.",
+  "commandLine": "ccgj command",
+  "commandLineNote": "Installs ccgj and ccguanjia in {dir}: ccgj list, ccgj run <profile>, ccgj use <profile>.",
+  "@commandLineNote": {
+    "placeholders": {
+      "dir": {
+        "type": "String"
+      }
+    }
+  },
+  "configFile": "Config file",
+  "copied": "Copied",
+  "copy": "Copy",
+  "copyServers": "Copy Servers",
+  "copyServersFrom": "Copy servers from",
+  "copyServersNote": "Adds only the servers this profile doesn't have, in mcpServers of its .claude.json. The rest of the file stays as it is.",
+  "create": "Create",
+  "created": "Created. Run {command} in a new terminal to sign in.",
+  "@created": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "current": "current",
+  "defaultForShells": "Default for new shells",
+  "defaultForShellsNote": "With the shell file, a new shell sets CLAUDE_CONFIG_DIR to this profile, so plain claude uses it.",
+  "defaultProfile": "Default",
+  "detecting": "Detecting…",
+  "dismiss": "Dismiss",
+  "done": "Done",
+  "dropDeadAllow": "{count, plural, =0 {No dead or repeated allow entries} one {Drop # dead or repeated allow entry} other {Drop # dead or repeated allow entries}}",
+  "@dropDeadAllow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dropOrphans": "{count, plural, =0 {No plugins of unknown marketplaces} one {Remove # plugin of an unknown marketplace} other {Remove # plugins of unknown marketplaces}}",
+  "@dropOrphans": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duplicate": "duplicate",
+  "email": "Email",
+  "errNoSpace": "There isn't enough free space for the archives. Nothing was deleted.",
+  "errRunning": "Claude Code is running. Quit it, or tick Run anyway. Nothing was deleted.",
+  "errVerify": "{detail}. The archives are kept in the backup folder.",
+  "@errVerify": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "estimatedBackup": "Backup",
+  "filesCount": "{count, plural, one {# file} other {# files}}",
+  "@filesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "folder": "Folder",
+  "folderNow": "Folder now",
+  "freeSpace": "Free",
+  "inAll": "in all",
+  "inUse": "in use",
+  "input": "Input",
+  "installHint": "Claude Code isn't on your shell's PATH. Install it with the official installer:",
+  "installSubtitle": "Claude Code on this Mac",
+  "installed": "Installed",
+  "installs": "Installs",
+  "installsCount": "{count, plural, one {# install} other {# installs}}",
+  "@installsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keptNote": "Never touched: skills, plugins, hooks, CLAUDE.md, history.jsonl, and anything that is a link.",
+  "keychainItem": "Keychain item",
+  "kindNative": "native",
+  "kindOther": "other",
+  "language": "Language",
+  "languageSystem": "System",
+  "last24h": "In the last 24 hours",
+  "last30d": "In the last 30 days",
+  "last7d": "In the last 7 days",
+  "latest": "Latest",
+  "launcher": "Launcher",
+  "linkElsewhere": "Links to {target}. Turning it on links it to ~/.claude.",
+  "@linkElsewhere": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "linkLinked": "Linked to ~/.claude",
+  "linkNoSource": "~/.claude has none",
+  "linkOwn": "This profile has its own, which is kept",
+  "linkToMain": "Link to ~/.claude",
+  "linkUnlinked": "Not linked",
+  "localOnlyNote": "Read from the local .claude.json only. CCGuanjia never reads or sends the sign-in token.",
+  "mainFolderNote": "The folder the others link to",
+  "mainFolderShared": "This is ~/.claude, which Claude Code uses when CLAUDE_CONFIG_DIR isn't set. The other profiles link their shared items to it.",
+  "menuAbout": "About CCGuanjia",
+  "menuSettings": "Settings",
+  "menuView": "View",
+  "method": "Method",
+  "models": "Models",
+  "name": "Name",
+  "nativeVersions": "Native Versions",
+  "newProfile": "New Profile…",
+  "newProfileNote": "A profile is a ~/.claude-<name> folder with its own sign-in and history, for another account of yours. Claude Code uses it through CLAUDE_CONFIG_DIR.",
+  "noNativeVersions": "The native installer keeps no versions here.",
+  "noNewServers": "No new servers to copy",
+  "noProjects": "No projects yet.",
+  "noReplies": "No replies in this time.",
+  "noServers": "No MCP servers in this profile's .claude.json.",
+  "noSettings": "This profile has no settings.json.",
+  "noUpdateCommand": "This install has no official update command.",
+  "noneFound": "None found.",
+  "notEnoughSpace": "Not enough free space: the archives need about {size}.",
+  "@notEnoughSpace": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "notInstalled": "Not installed",
+  "notOnPath": "{dir} isn't on your shell's PATH yet.",
+  "@notOnPath": {
+    "placeholders": {
+      "dir": {
+        "type": "String"
+      }
+    }
+  },
+  "noteBackups": "Claude Code's own backups of .claude.json, copied to the backup first",
+  "noteDSStore": "Finder metadata",
+  "noteDaemon": "Stale state of the background daemon",
+  "noteEmpty": "An empty folder",
+  "noteFileHistory": "Earlier versions of edited files, for rewinding",
+  "noteJobs": "Records of background jobs and tasks",
+  "notePasteCache": "Images pasted into prompts",
+  "noteProjects": "Session transcripts, by project",
+  "noteSessionEnv": "Scratch folders of sessions",
+  "noteShellSnapshots": "Shell snapshots, made again when needed",
+  "noteStatsCache": "A stale stats cache",
+  "noteStray": "A .claude.json of another machine, which this one doesn't use",
+  "noteTelemetry": "Telemetry events that failed to send",
+  "noteUpdateResult": "The result of a past update",
+  "nothingToClean": "Nothing to clean.",
+  "nothingToSignOut": "This profile isn't signed in.",
+  "off": "Off",
+  "officialCommands": "Updates and reinstalls run the official command of the way it was installed, in your login shell.",
+  "onPath": "On the PATH",
+  "onThisMac": "On this Mac",
+  "open": "Open",
+  "openInTerminal": "Open in Terminal",
+  "organization": "Organization",
+  "other": "Other",
+  "output": "Output",
+  "pageCleanup": "Cleanup",
+  "pageInstall": "Install",
+  "pageOverview": "Overview",
+  "phaseArchive": "Archive",
+  "phaseBackup": "Copy config",
+  "phaseDelete": "Delete",
+  "phaseSettings": "settings.json",
+  "phaseSignOut": "Sign out",
+  "phaseVerify": "Verify",
+  "plan": "Plan",
+  "principle1": "Manages your own accounts on this Mac, through Claude Code's own CLAUDE_CONFIG_DIR.",
+  "principle2": "Never reads, copies or sends a sign-in token: it only asks the Keychain whether an item is there.",
+  "principle3": "Reads plans and usage from local files only, and changes nothing about where you appear to be.",
+  "principle4": "Backs up and verifies before it deletes anything.",
+  "profile": "Profile",
+  "profileName": "Profile name",
+  "projects": "Projects",
+  "projectsCount": "{count, plural, one {# project} other {# projects}}",
+  "@projectsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "range24h": "24h",
+  "range30d": "30d",
+  "range7d": "7d",
+  "reclaimable": "Reclaimable",
+  "refresh": "Refresh",
+  "reinstall": "Reinstall",
+  "reinstallButton": "Reinstall…",
+  "reinstallDetail": "This runs: {command}. Settings, sessions and sign-ins stay.",
+  "@reinstallDetail": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "reinstallQuestion": "Reinstall Claude Code?",
+  "remove": "Remove",
+  "removeDetail": "{folder} goes, with its history and settings, and its sign-in goes from the Keychain. The items it links to stay in ~/.claude.",
+  "@removeDetail": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "removeNote": "Removing deletes {folder}, its history and its sign-in. The shared items it links to stay.",
+  "@removeNote": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "removeProfile": "Remove Profile",
+  "removeProfileButton": "Remove Profile…",
+  "removeQuestion": "Remove the profile “{name}”?",
+  "@removeQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "removeVersions": "{count, plural, =0 {Remove} one {Remove # version ({size})} other {Remove # versions ({size})}}",
+  "@removeVersions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "removeVersionsDetail": "They are only older binaries of the native installer. The current version and the ones running stay.",
+  "removeVersionsQuestion": "{count, plural, one {Remove # old version?} other {Remove # old versions?}}",
+  "@removeVersionsQuestion": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removed": "Removed",
+  "replies": "Replies",
+  "runAnyway": "Run anyway",
+  "runs": "runs",
+  "scanning": "Looking at the folder…",
+  "sectionMaintenance": "Maintenance",
+  "sectionProfiles": "Profiles",
+  "serversCopied": "{count, plural, one {Copied # server} other {Copied # servers}}",
+  "@serversCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serversCount": "{count, plural, =0 {none} one {# server} other {# servers}}",
+  "@serversCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsShared": "settings.json links to {path}: these edits change every profile that shares it.",
+  "@settingsShared": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsUnreadable": "settings.json can't be read: {error}",
+  "@settingsUnreadable": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "severalInstalls": "Claude Code is installed {count} ways. The first on the PATH runs; the others are easy to update by mistake.",
+  "@severalInstalls": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shadowed": "In your shell, claude is a {kind}, so typing claude may not run the install below.",
+  "@shadowed": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "sharedCount": "{linked} of {total} shared items linked",
+  "@sharedCount": {
+    "placeholders": {
+      "linked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "shellFile": "Shell file",
+  "shellFileNote": "Adds one line to ~/.zshrc that sources CCGuanjia's file, with a cc-<name> function for each profile. Your own lines stay as they are.",
+  "shellNeeded": "{command} works once the shell file is on, in Settings. Open in Terminal works now.",
+  "@shellNeeded": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "shellOff": "Shell off",
+  "shellOn": "Shell on",
+  "shellReload": "New terminals pick it up; run exec zsh in open ones.",
+  "showBackup": "Show Backup",
+  "signInAgain": "Run the profile's launcher to sign in again.",
+  "signInHint": "Not signed in yet: open it in a terminal and sign in once.",
+  "signOutNote": "The sign-in isn't backed up: signing in again restores it.",
+  "signedIn": "Signed in",
+  "signedOut": "Signed out",
+  "signedOutShort": "signed out",
+  "skipPermissions": "Skip permission prompts",
+  "skipPermissionsNote": "Adds --dangerously-skip-permissions to cc-<name>. Claude Code then runs every tool without asking.",
+  "stop": "Stop",
+  "storageByProject": "Storage by Project",
+  "storageByType": "Storage by Type",
+  "terminalApp": "Terminal",
+  "terminalAppNote": "What Open in Terminal opens.",
+  "toArchive": "To archive",
+  "tokensByModel": "Tokens by Model",
+  "tokensInAll": "{count} in all",
+  "@tokensInAll": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "typeToConfirm": "Type {name} to confirm signing out",
+  "@typeToConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "unset": "unset",
+  "upToDate": "Up to date",
+  "update": "Update",
+  "updateAvailable": "Update available",
+  "updateTo": "{version} available",
+  "@updateTo": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updates": "Updates",
+  "variantsNote": "Also deleted after a copy: {names} ({size}).",
+  "@variantsNote": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "versionsCount": "{count, plural, one {# version} other {# versions}}",
+  "@versionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "versionsKept": "{count, plural, one {# native version kept} other {# native versions kept}}, {size} removable",
+  "@versionsKept": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "versionsNote": "Older versions stay after updates. The current one and those still running are kept.",
+  "versionsRemoved": "{count, plural, one {Removed # version, {size}} other {Removed # versions, {size}}}",
+  "@versionsRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+# Tests and builds CCGuanjia on every push to main and on pull requests, and
+# uploads the app it builds.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test -short ./...
+      - name: Build
+        run: go tool mygo build -platform darwin/arm64
+      - name: Verify signature
+        run: codesign --verify --strict --verbose=2 build/darwin-arm64/CCGuanjia.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CCGuanjia.app
+          path: build/darwin-arm64/CCGuanjia.app

@@ -1,0 +1,6 @@
+/build/
+/.mygo/
+/cmd/ccguanjia/ccguanjia
+.DS_Store
+/ccguanjia
+*.test

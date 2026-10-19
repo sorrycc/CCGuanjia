@@ -1,0 +1,22 @@
+{
+  "name": "CCGuanjia",
+  "identifier": "dev.sorrycc.ccguanjia",
+  "version": "0.1.0",
+  "copyright": "© 2026 chencheng",
+  "main": "./cmd/ccguanjia",
+  "out": "build",
+  "i18n": {
+    "dir": "locales",
+    "source": "en"
+  },
+  "macos": {
+    "minimumSystemVersion": "13.0",
+    "infoPlist": {
+      "LSApplicationCategoryType": "public.app-category.developer-tools"
+    }
+  },
+  "updates": {
+    "publicKey": "Ya9o8JrETUjoB1Wtk1rV79lsoaw7bof1/P3ADEnzBOw=",
+    "github": "sorrycc/CCGuanjia"
+  }
+}
