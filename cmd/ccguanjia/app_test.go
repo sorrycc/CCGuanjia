@@ -870,3 +870,68 @@ func TestClaudeSettingsJSON(t *testing.T) {
 		t.Error("saved a file of the wrong types")
 	}
 }
+
+// A change shows a dot by its row and the bar of the changes; the dot's
+// button puts the file's value back, and ⌘S opens the review.
+func TestClaudeSettingsRevertAndShortcut(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1600)
+	a.show(pageClaudeSettings, "default")
+	tt.Frame()
+	if tt.HasText(locales.CsUnsaved(1)) {
+		t.Fatal("the bar of the changes shows without changes")
+	}
+	d := a.csDrafts["default"]
+	d.set([]string{"model"}, "opus")
+	d.syncFields()
+	tt.Frame()
+	if !tt.HasText(locales.CsUnsaved(1)) {
+		t.Fatalf("no bar in %q", tt.Texts())
+	}
+	tt.Key(ui.Cmd, ui.KeyS)
+	tt.Frame()
+	if !d.review {
+		t.Fatal("⌘S did not open the review")
+	}
+	d.review = false
+	tt.Frame()
+	if err := tt.Click(locales.CsRevert("model")); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if n := len(d.changes()); n != 0 || d.model != "" {
+		t.Errorf("after reverting: %d changes, model %q", n, d.model)
+	}
+	if !d.draft.Has("cleanupPeriodDays") {
+		t.Error("reverting took another key")
+	}
+}
+
+// What is typed in the JSON editor is the draft, and what does not parse
+// says so.
+func TestClaudeSettingsJSONEditor(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1400)
+	a.show(pageClaudeSettings, "default")
+	tt.Frame()
+	if err := tt.Click("JSON"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	d := a.csDrafts["default"]
+	if d.code == nil || d.code.Buffer.String() != d.raw {
+		t.Fatal("the editor does not hold the JSON")
+	}
+	d.code.Buffer.Set(`{"model": "sonnet"}`)
+	tt.Frame()
+	var model string
+	d.draft.Get("model", &model)
+	if model != "sonnet" || d.rawErr != "" {
+		t.Errorf("model %q, error %q", model, d.rawErr)
+	}
+	d.code.Buffer.Set(`{"model": `)
+	tt.Frame()
+	if d.rawErr == "" || !tt.HasText(locales.CsInvalidShort()) {
+		t.Errorf("no error for JSON that does not parse: %q", tt.Texts())
+	}
+}

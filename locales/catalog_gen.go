@@ -796,6 +796,26 @@ func (msgs Messages) CsAutoCompactNote() string {
 	return Catalog.Format(msgs.locale, "csAutoCompactNote", nil)
 }
 
+// CsBacksUp says "The file is backed up before it is written."
+// in the language the app shows.
+func CsBacksUp() string { return In(i18n.Locale()).CsBacksUp() }
+
+// CsBacksUp says "The file is backed up before it is written."
+// in the language of msgs.
+func (msgs Messages) CsBacksUp() string {
+	return Catalog.Format(msgs.locale, "csBacksUp", nil)
+}
+
+// CsBackups says "Backups"
+// in the language the app shows.
+func CsBackups() string { return In(i18n.Locale()).CsBackups() }
+
+// CsBackups says "Backups"
+// in the language of msgs.
+func (msgs Messages) CsBackups() string {
+	return Catalog.Format(msgs.locale, "csBackups", nil)
+}
+
 // CsBackupsNote says "Each save backs the file up first, into {path}."
 // in the language the app shows.
 func CsBackupsNote(path string) string { return In(i18n.Locale()).CsBackupsNote(path) }
@@ -854,6 +874,16 @@ func CsDetachNote() string { return In(i18n.Locale()).CsDetachNote() }
 // in the language of msgs.
 func (msgs Messages) CsDetachNote() string {
 	return Catalog.Format(msgs.locale, "csDetachNote", nil)
+}
+
+// CsDetachTitle says "Make it its own"
+// in the language the app shows.
+func CsDetachTitle() string { return In(i18n.Locale()).CsDetachTitle() }
+
+// CsDetachTitle says "Make it its own"
+// in the language of msgs.
+func (msgs Messages) CsDetachTitle() string {
+	return Catalog.Format(msgs.locale, "csDetachTitle", nil)
 }
 
 // CsDetached says "settings.json is now this profile's own"
@@ -946,6 +976,26 @@ func (msgs Messages) CsInvalidJSON(error string) string {
 	return Catalog.Format(msgs.locale, "csInvalidJSON", map[string]any{"error": error})
 }
 
+// CsInvalidShort says "The JSON doesn't parse"
+// in the language the app shows.
+func CsInvalidShort() string { return In(i18n.Locale()).CsInvalidShort() }
+
+// CsInvalidShort says "The JSON doesn't parse"
+// in the language of msgs.
+func (msgs Messages) CsInvalidShort() string {
+	return Catalog.Format(msgs.locale, "csInvalidShort", nil)
+}
+
+// CsKeys says "Keys"
+// in the language the app shows.
+func CsKeys() string { return In(i18n.Locale()).CsKeys() }
+
+// CsKeys says "Keys"
+// in the language of msgs.
+func (msgs Messages) CsKeys() string {
+	return Catalog.Format(msgs.locale, "csKeys", nil)
+}
+
 // CsKeysDiffer says "{count, plural, =0 {alike} one {# key differs} other {# keys differ}}"
 // in the language the app shows.
 func CsKeysDiffer(count int) string { return In(i18n.Locale()).CsKeysDiffer(count) }
@@ -954,6 +1004,16 @@ func CsKeysDiffer(count int) string { return In(i18n.Locale()).CsKeysDiffer(coun
 // in the language of msgs.
 func (msgs Messages) CsKeysDiffer(count int) string {
 	return Catalog.Format(msgs.locale, "csKeysDiffer", map[string]any{"count": count})
+}
+
+// CsLinked says "Linked"
+// in the language the app shows.
+func CsLinked() string { return In(i18n.Locale()).CsLinked() }
+
+// CsLinked says "Linked"
+// in the language of msgs.
+func (msgs Messages) CsLinked() string {
+	return Catalog.Format(msgs.locale, "csLinked", nil)
 }
 
 // CsLinksTo says "Links to {path}"
@@ -976,6 +1036,26 @@ func (msgs Messages) CsModelNote() string {
 	return Catalog.Format(msgs.locale, "csModelNote", nil)
 }
 
+// CsModified says "Changed, not saved yet"
+// in the language the app shows.
+func CsModified() string { return In(i18n.Locale()).CsModified() }
+
+// CsModified says "Changed, not saved yet"
+// in the language of msgs.
+func (msgs Messages) CsModified() string {
+	return Catalog.Format(msgs.locale, "csModified", nil)
+}
+
+// CsNoEnv says "No variables yet."
+// in the language the app shows.
+func CsNoEnv() string { return In(i18n.Locale()).CsNoEnv() }
+
+// CsNoEnv says "No variables yet."
+// in the language of msgs.
+func (msgs Messages) CsNoEnv() string {
+	return Catalog.Format(msgs.locale, "csNoEnv", nil)
+}
+
 // CsNoFile says "There is no settings.json yet. Saving makes one."
 // in the language the app shows.
 func CsNoFile() string { return In(i18n.Locale()).CsNoFile() }
@@ -984,6 +1064,16 @@ func CsNoFile() string { return In(i18n.Locale()).CsNoFile() }
 // in the language of msgs.
 func (msgs Messages) CsNoFile() string {
 	return Catalog.Format(msgs.locale, "csNoFile", nil)
+}
+
+// CsNotCreated says "Not created yet"
+// in the language the app shows.
+func CsNotCreated() string { return In(i18n.Locale()).CsNotCreated() }
+
+// CsNotCreated says "Not created yet"
+// in the language of msgs.
+func (msgs Messages) CsNotCreated() string {
+	return Catalog.Format(msgs.locale, "csNotCreated", nil)
 }
 
 // CsOnlyHere says "only here"
@@ -1006,6 +1096,16 @@ func (msgs Messages) CsOnlyIn(name string) string {
 	return Catalog.Format(msgs.locale, "csOnlyIn", map[string]any{"name": name})
 }
 
+// CsOwnFile says "Own file"
+// in the language the app shows.
+func CsOwnFile() string { return In(i18n.Locale()).CsOwnFile() }
+
+// CsOwnFile says "Own file"
+// in the language of msgs.
+func (msgs Messages) CsOwnFile() string {
+	return Catalog.Format(msgs.locale, "csOwnFile", nil)
+}
+
 // CsPluginsOn says "{on} of {total} on"
 // in the language the app shows.
 func CsPluginsOn(on int, total int) string { return In(i18n.Locale()).CsPluginsOn(on, total) }
@@ -1014,6 +1114,16 @@ func CsPluginsOn(on int, total int) string { return In(i18n.Locale()).CsPluginsO
 // in the language of msgs.
 func (msgs Messages) CsPluginsOn(on int, total int) string {
 	return Catalog.Format(msgs.locale, "csPluginsOn", map[string]any{"on": on, "total": total})
+}
+
+// CsRevert says "Put back {key} as the file has it"
+// in the language the app shows.
+func CsRevert(key string) string { return In(i18n.Locale()).CsRevert(key) }
+
+// CsRevert says "Put back {key} as the file has it"
+// in the language of msgs.
+func (msgs Messages) CsRevert(key string) string {
+	return Catalog.Format(msgs.locale, "csRevert", map[string]any{"key": key})
 }
 
 // CsSaved says "settings.json saved"
@@ -1044,6 +1154,26 @@ func CsUnchecked(keys string) string { return In(i18n.Locale()).CsUnchecked(keys
 // in the language of msgs.
 func (msgs Messages) CsUnchecked(keys string) string {
 	return Catalog.Format(msgs.locale, "csUnchecked", map[string]any{"keys": keys})
+}
+
+// CsUnsaved says "{count, plural, one {# unsaved change} other {# unsaved changes}}"
+// in the language the app shows.
+func CsUnsaved(count int) string { return In(i18n.Locale()).CsUnsaved(count) }
+
+// CsUnsaved says "{count, plural, one {# unsaved change} other {# unsaved changes}}"
+// in the language of msgs.
+func (msgs Messages) CsUnsaved(count int) string {
+	return Catalog.Format(msgs.locale, "csUnsaved", map[string]any{"count": count})
+}
+
+// CsValidJSON says "Valid JSON, and every key it knows has its type."
+// in the language the app shows.
+func CsValidJSON() string { return In(i18n.Locale()).CsValidJSON() }
+
+// CsValidJSON says "Valid JSON, and every key it knows has its type."
+// in the language of msgs.
+func (msgs Messages) CsValidJSON() string {
+	return Catalog.Format(msgs.locale, "csValidJSON", nil)
 }
 
 // CsWant says "{key} should be {kind}"
@@ -1704,6 +1834,16 @@ func Less() string { return In(i18n.Locale()).Less() }
 // in the language of msgs.
 func (msgs Messages) Less() string {
 	return Catalog.Format(msgs.locale, "less", nil)
+}
+
+// Lines says "{count, plural, one {# line} other {# lines}}"
+// in the language the app shows.
+func Lines(count int) string { return In(i18n.Locale()).Lines(count) }
+
+// Lines says "{count, plural, one {# line} other {# lines}}"
+// in the language of msgs.
+func (msgs Messages) Lines(count int) string {
+	return Catalog.Format(msgs.locale, "lines", map[string]any{"count": count})
 }
 
 // LinkElsewhere says "Links to {target}. Turning it on links it to ~/.claude."
@@ -3126,6 +3266,16 @@ func ShortcutPalette() string { return In(i18n.Locale()).ShortcutPalette() }
 // in the language of msgs.
 func (msgs Messages) ShortcutPalette() string {
 	return Catalog.Format(msgs.locale, "shortcutPalette", nil)
+}
+
+// ShortcutReview says "Review changes in Claude Settings"
+// in the language the app shows.
+func ShortcutReview() string { return In(i18n.Locale()).ShortcutReview() }
+
+// ShortcutReview says "Review changes in Claude Settings"
+// in the language of msgs.
+func (msgs Messages) ShortcutReview() string {
+	return Catalog.Format(msgs.locale, "shortcutReview", nil)
 }
 
 // ShortcutStep says "Next or previous profile"

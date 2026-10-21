@@ -12,6 +12,12 @@ needs a `## <version>` section here, or its build fails.
   was read, and backs the file up first. A file shared through a link says
   which profiles a change reaches, **Detach** makes it the profile's own,
   and Compare copies chosen keys from another profile's file.
+- Claude Settings looks after what you change: a dot and a revert button
+  mark each value that differs from the file, a bar rises with Discard and
+  Review while there are unsaved changes, and ⌘S opens the review. The
+  JSON tab is a code editor with highlighting, the lines changed marked in
+  its gutter and the error underlined where it is. The review shows the
+  changes key by key or as a diff of the file's lines.
 
 ## 0.1.0
 

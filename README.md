@@ -44,7 +44,8 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
   installer's old versions that are neither current nor running.
 - **Claude Settings.** Each profile's `settings.json` in a form: the model, effort, permission rules and mode,
   environment variables, plugins, and its hooks and status line to look at. The JSON tab edits the whole file and
-  checks the types of the keys it knows. Every save shows its diff first, stops when Claude Code changed the file
+  checks the types of the keys it knows, in a code editor. Changed values are marked and can be reverted one by
+  one, and ⌘S reviews them. Every save shows its diff first, stops when Claude Code changed the file
   since it was read, and backs it up. A file shared through a link says which profiles a change reaches, and
   **Detach** makes it the profile's own. Compare sets it against another profile's and copies the keys chosen.
 - **Cleanup.** The order of `clean-claude.ts`: copy the configuration out, archive `projects/` and `file-history/`,

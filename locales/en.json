@@ -156,6 +156,8 @@
   "csAlike": "The two files are alike.",
   "csAlwaysThinkingNote": "Start each session with extended thinking on.",
   "csAutoCompactNote": "Compact the conversation when the context is nearly full.",
+  "csBacksUp": "The file is backed up before it is written.",
+  "csBackups": "Backups",
   "csBackupsNote": "Each save backs the file up first, into {path}.",
   "@csBackupsNote": {
     "placeholders": {
@@ -183,6 +185,7 @@
   },
   "csDefaultModeNote": "The permission mode sessions start in.",
   "csDetachNote": "Makes this profile's settings.json a copy of its own, so that its changes are its alone.",
+  "csDetachTitle": "Make it its own",
   "csDetached": "settings.json is now this profile's own",
   "csDiffers": "differs",
   "csDisableHooksNote": "Claude Code runs none of the hooks below, nor the status line.",
@@ -199,6 +202,8 @@
       }
     }
   },
+  "csInvalidShort": "The JSON doesn't parse",
+  "csKeys": "Keys",
   "csKeysDiffer": "{count, plural, =0 {alike} one {# key differs} other {# keys differ}}",
   "@csKeysDiffer": {
     "placeholders": {
@@ -207,6 +212,7 @@
       }
     }
   },
+  "csLinked": "Linked",
   "csLinksTo": "Links to {path}",
   "@csLinksTo": {
     "placeholders": {
@@ -216,7 +222,10 @@
     }
   },
   "csModelNote": "An alias such as opus or sonnet, or a model's full name. Empty leaves it to Claude Code.",
+  "csModified": "Changed, not saved yet",
+  "csNoEnv": "No variables yet.",
   "csNoFile": "There is no settings.json yet. Saving makes one.",
+  "csNotCreated": "Not created yet",
   "csOnlyHere": "only here",
   "csOnlyIn": "only in {name}",
   "@csOnlyIn": {
@@ -226,6 +235,7 @@
       }
     }
   },
+  "csOwnFile": "Own file",
   "csPluginsOn": "{on} of {total} on",
   "@csPluginsOn": {
     "placeholders": {
@@ -234,6 +244,14 @@
       },
       "total": {
         "type": "int"
+      }
+    }
+  },
+  "csRevert": "Put back {key} as the file has it",
+  "@csRevert": {
+    "placeholders": {
+      "key": {
+        "type": "String"
       }
     }
   },
@@ -254,6 +272,15 @@
       }
     }
   },
+  "csUnsaved": "{count, plural, one {# unsaved change} other {# unsaved changes}}",
+  "@csUnsaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "csValidJSON": "Valid JSON, and every key it knows has its type.",
   "csWant": "{key} should be {kind}",
   "@csWant": {
     "placeholders": {
@@ -393,6 +420,14 @@
   "latest": "Latest",
   "launcher": "Launcher",
   "less": "Less",
+  "lines": "{count, plural, one {# line} other {# lines}}",
+  "@lines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "linkElsewhere": "Links to {target}. Turning it on links it to ~/.claude.",
   "@linkElsewhere": {
     "placeholders": {
@@ -723,6 +758,7 @@
   "shellReload": "New terminals pick it up; run exec zsh in open ones.",
   "shortcutPages": "Overview, Install, Cleanup, Claude Settings",
   "shortcutPalette": "Command palette",
+  "shortcutReview": "Review changes in Claude Settings",
   "shortcutStep": "Next or previous profile",
   "showAllSessions": "Show all {count}",
   "@showAllSessions": {

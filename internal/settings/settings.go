@@ -119,18 +119,28 @@ func (f *File) Save(o *jsonedit.Object, force bool, backupDir string) error {
 			return fmt.Errorf("backing up settings.json: %w", err)
 		}
 	}
+	out, err := f.Output(o)
+	if err != nil {
+		return err
+	}
+	return claude.WriteFile(f.Path, out)
+}
+
+// Output is what Save writes of o: indented as the file is, and ending in
+// a new line when the file does.
+func (f *File) Output(o *jsonedit.Object) ([]byte, error) {
 	indent := "  "
 	if f.Data != nil {
 		indent = jsonedit.Indent(f.Data)
 	}
 	out, err := o.Marshal(indent)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if bytes.HasSuffix(f.Data, []byte("\n")) {
 		out = append(out, '\n')
 	}
-	return claude.WriteFile(f.Path, out)
+	return out, nil
 }
 
 // keepBackups is how many backups of a profile's settings.json are kept.

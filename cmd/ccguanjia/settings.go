@@ -110,6 +110,7 @@ func (a *app) settingsPage(c *ui.Context, p palette) {
 						{locales.NewProfile(), "⌘ N"},
 						{locales.ShortcutPages(), "⌘ 1 · 2 · 3 · 4"},
 						{locales.ShortcutStep(), "⌥ ⌘ ↓ ↑"},
+						{locales.ShortcutReview(), "⌘ S"},
 						{locales.Refresh(), "⌘ R"},
 						{locales.MenuSettings(), "⌘ ,"},
 					} {

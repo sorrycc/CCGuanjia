@@ -55,6 +55,7 @@ func (a *app) view(c *ui.Context) {
 					a.claudeSettingsPage(c, p)
 				}
 			})
+			a.csSaveBar(c, p)
 		})
 	})
 	a.newProfileDialog(c, p)
@@ -62,12 +63,15 @@ func (a *app) view(c *ui.Context) {
 	a.shortcuts(c)
 }
 
-// shortcuts are the keys of the window. The View menu has ⌘K and ⌘N as
-// well, and takes them first in the app.
+// shortcuts are the keys of the window: ⌘S reviews the changes of Claude
+// Settings. The View menu has ⌘K and ⌘N as well, and takes them first in
+// the app.
 func (a *app) shortcuts(c *ui.Context) {
 	switch {
 	case c.Shortcut(ui.Cmd, ui.KeyK):
 		a.openPalette()
+	case a.page == pageClaudeSettings && c.Shortcut(ui.Cmd, ui.KeyS):
+		a.csReview()
 	case c.Shortcut(ui.Cmd, ui.KeyN):
 		a.resetNew()
 		a.newOpen = true
