@@ -28,6 +28,11 @@ needs a `## <version>` section here, or its build fails.
 - Install: the native installer, npm, Homebrew or Bun, with update and
   reinstall through each one's official command, and removal of the native
   installer's old versions that are neither current nor running.
+- Install a chosen version of Claude Code: pick one of npm's recent versions
+  or type one, and it runs the official command of the way it was installed
+  (not Homebrew, whose cask has only the newest). **Keep this version** sets
+  `DISABLE_AUTOUPDATER` in `~/.claude/settings.json` so it stays. A native
+  version already downloaded has **Use** to switch to it.
 - Cleanup, in the order of `clean-claude.ts`: copy the configuration out,
   archive `projects/` and `file-history/`, verify the archives, and only
   then edit `settings.json` and delete. Signing out is optional and comes

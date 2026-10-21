@@ -142,6 +142,28 @@ func TestCopyMCP(t *testing.T) {
 	}
 }
 
+func TestDisableAutoUpdate(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	write(t, path, "{\n    \"model\": \"opus\",\n    \"env\": {\"FOO\": \"bar\"}\n}")
+	must(t, DisableAutoUpdate(dir))
+	data, _ := os.ReadFile(path)
+	text := string(data)
+	if !strings.HasPrefix(text, "{\n    \"model\"") || !strings.Contains(text, `"FOO": "bar"`) || !strings.Contains(text, `"DISABLE_AUTOUPDATER": "1"`) {
+		t.Errorf("settings:\n%s", text)
+	}
+	must(t, DisableAutoUpdate(dir))
+	if again, _ := os.ReadFile(path); string(again) != text {
+		t.Errorf("rewritten:\n%s", again)
+	}
+	// Without settings.json yet.
+	fresh := t.TempDir()
+	must(t, DisableAutoUpdate(fresh))
+	if data, _ := os.ReadFile(filepath.Join(fresh, "settings.json")); !strings.Contains(string(data), `"DISABLE_AUTOUPDATER": "1"`) {
+		t.Errorf("fresh:\n%s", data)
+	}
+}
+
 func TestSignOut(t *testing.T) {
 	e := newEnv(t)
 	p := e.Load(DefaultName)

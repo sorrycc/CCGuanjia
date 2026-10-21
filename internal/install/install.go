@@ -1,13 +1,14 @@
 // Package install finds how Claude Code is installed (the native
 // installer, npm, Homebrew or Bun) and its version, the native installer's
-// older versions, and updates or reinstalls it the way it was installed,
-// with that way's own command.
+// older versions, and updates, reinstalls or installs a chosen version of
+// it the way it was installed, with that way's own command.
 package install
 
 import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -358,6 +359,55 @@ func Latest(ctx context.Context, client *http.Client) (string, error) {
 	return "", err
 }
 
+// NPMPackageURL lists every version npm has, in the short form npm
+// install reads.
+const NPMPackageURL = "https://registry.npmjs.org/@anthropic-ai/claude-code"
+
+// Available asks npm for the released versions of Claude Code, newest
+// first, at most limit of them. Prereleases are left out. The request
+// carries nothing of the user's.
+func Available(ctx context.Context, client *http.Client, limit int) ([]string, error) {
+	if client == nil {
+		client = &http.Client{Timeout: 15 * time.Second}
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, NPMPackageURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.npm.install-v1+json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", NPMPackageURL, resp.Status)
+	}
+	var doc struct {
+		Versions map[string]json.RawMessage `json:"versions"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 32<<20)).Decode(&doc); err != nil {
+		return nil, fmt.Errorf("%s: %w", NPMPackageURL, err)
+	}
+	var vs []string
+	for v := range doc.Versions {
+		if ValidVersion(v) {
+			vs = append(vs, v)
+		}
+	}
+	sort.Slice(vs, func(i, j int) bool { return Compare(vs[i], vs[j]) > 0 })
+	if limit > 0 && len(vs) > limit {
+		vs = vs[:limit]
+	}
+	return vs, nil
+}
+
+var exactVersionRE = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+// ValidVersion reports whether v is a release version x.y.z, the only
+// thing put into a command as a version.
+func ValidVersion(v string) bool { return exactVersionRE.MatchString(v) }
+
 // Action is what to do to an install.
 type Action int
 
@@ -384,6 +434,25 @@ func Command(kind Kind, a Action, path string) string {
 		return "brew reinstall --cask claude-code"
 	case Bun:
 		return "bun add -g @anthropic-ai/claude-code@latest"
+	}
+	return ""
+}
+
+// VersionCommand is the shell command that installs version of Claude
+// Code in place of an install of kind, by the official way of that kind,
+// "" when that way cannot choose a version (Homebrew's cask has only the
+// newest) or version is not x.y.z.
+func VersionCommand(kind Kind, path, version string) string {
+	if !ValidVersion(version) {
+		return ""
+	}
+	switch kind {
+	case Native:
+		return shellQuote(path) + " install " + version
+	case NPM:
+		return "npm install -g @anthropic-ai/claude-code@" + version
+	case Bun:
+		return "bun add -g @anthropic-ai/claude-code@" + version
 	}
 	return ""
 }

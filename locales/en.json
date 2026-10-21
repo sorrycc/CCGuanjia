@@ -20,6 +20,14 @@
     }
   },
   "archivedFirst": "archived first",
+  "autoUpdateOff": "Auto-update is off in {file}",
+  "@autoUpdateOff": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
   "backUpAndClean": "Back Up and Clean",
   "backUpAndCleanButton": "Back Up and Clean…",
   "backupOrder": "Config is copied out, projects/ and file-history/ are archived and verified, and only then is anything edited or deleted. Signing out comes last.",
@@ -140,6 +148,7 @@
   "detecting": "Detecting…",
   "dismiss": "Dismiss",
   "done": "Done",
+  "downloaded": "downloaded",
   "dropDeadAllow": "{count, plural, =0 {No dead or repeated allow entries} one {Drop # dead or repeated allow entry} other {Drop # dead or repeated allow entries}}",
   "@dropDeadAllow": {
     "placeholders": {
@@ -169,6 +178,7 @@
     }
   },
   "estimatedBackup": "Backup",
+  "fetchingVersions": "Fetching versions…",
   "filesCount": "{count, plural, one {# file} other {# files}}",
   "@filesCount": {
     "placeholders": {
@@ -194,6 +204,17 @@
   "input": "Input",
   "installHint": "Claude Code isn't on your shell's PATH. Install it with the official installer:",
   "installSubtitle": "Claude Code on this Mac",
+  "installThis": "Install {version}",
+  "@installThis": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "installVersion": "Install a Version",
+  "installVersionButton": "Install Version…",
+  "installVersionNote": "Installs the version you choose in place of the one that runs, with the official command of the way it was installed.",
   "installed": "Installed",
   "installs": "Installs",
   "installsCount": "{count, plural, one {# install} other {# installs}}",
@@ -204,7 +225,17 @@
       }
     }
   },
+  "invalidVersion": "A version is x.y.z, like 2.1.288.",
   "justNow": "just now",
+  "keepVersion": "Keep this version: turn off auto-update",
+  "keepVersionNote": "Sets DISABLE_AUTOUPDATER in {file}. Remove it there to update automatically again.",
+  "@keepVersionNote": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
   "keptNote": "Never touched: skills, plugins, hooks, CLAUDE.md, history.jsonl, and anything that is a link.",
   "keychainItem": "Keychain item",
   "kindNative": "native",
@@ -270,6 +301,7 @@
   "noSessions": "No sessions in this window.",
   "noSettings": "This profile has no settings.json.",
   "noUpdateCommand": "This install has no official update command.",
+  "noVersionCommand": "Homebrew's cask installs only the newest version.",
   "noneFound": "None found.",
   "notEnoughSpace": "Not enough free space: the archives need about {size}.",
   "@notEnoughSpace": {
@@ -358,6 +390,7 @@
   "range24h": "24h",
   "range30d": "30d",
   "range7d": "7d",
+  "recentVersions": "Recent versions",
   "reclaimable": "Reclaimable",
   "refresh": "Refresh",
   "reinstall": "Reinstall",
@@ -606,6 +639,7 @@
     }
   },
   "updates": "Updates",
+  "use": "Use",
   "variantsNote": "Also deleted after a copy: {names} ({size}).",
   "@variantsNote": {
     "placeholders": {
@@ -617,6 +651,7 @@
       }
     }
   },
+  "version": "Version",
   "versionsCount": "{count, plural, one {# version} other {# versions}}",
   "@versionsCount": {
     "placeholders": {
@@ -648,6 +683,7 @@
       }
     }
   },
+  "versionsUnavailable": "Couldn't fetch the list of versions. You can still type one.",
   "weekdays": "Sun Mon Tue Wed Thu Fri Sat",
   "whatsNew": "What's New"
 }

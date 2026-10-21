@@ -39,8 +39,8 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
   Code minute by minute, reading only the transcripts that changed.
 - **Command palette.** ⌘K goes to any page or profile, starts a profile in the terminal, resumes a recent session,
   copies a launcher, or makes a new profile.
-- **Install.** Finds the native installer, npm, Homebrew or Bun, and updates or reinstalls through that method's
-  official command. It warns when there are several installs or `claude` is a shell function, and removes the native
+- **Install.** Finds the native installer, npm, Homebrew or Bun, and updates, reinstalls or installs a chosen version
+  through that method's official command, optionally turning auto-update off to keep it. It warns when there are several installs or `claude` is a shell function, and removes the native
   installer's old versions that are neither current nor running.
 - **Cleanup.** The order of `clean-claude.ts`: copy the configuration out, archive `projects/` and `file-history/`,
   verify the archives, and only then edit `settings.json` and delete. Each item and each settings edit is a check box

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -352,6 +353,70 @@ func TestInstallPage(t *testing.T) {
 		if !tt.HasText(want) {
 			t.Errorf("no %q in %q", want, tt.Texts())
 		}
+	}
+}
+
+func TestInstallVersion(t *testing.T) {
+	a := fixture(t)
+	a.available = func() ([]string, error) { return []string{"2.1.303", "2.1.302", "2.1.289", "2.1.288"}, nil }
+	in := a.inst.Active()
+	// The native installer's claude, which says what it was asked.
+	write(t, in.Path, "#!/bin/sh\necho \"installing $2\"\n")
+	if err := os.Chmod(in.Path, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	tt := newTester(a.view, 1320, 940)
+	tt.Click(locales.PageInstall())
+	tt.Frame()
+	if err := tt.Click(locales.InstallVersionButton()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !a.verOpen {
+		t.Fatal("no dialog")
+	}
+	for _, want := range []string{locales.RecentVersions(), locales.Downloaded(), locales.Latest(), locales.KeepVersion()} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	a.verWant = "2.1"
+	tt.Frame()
+	if !tt.HasText(locales.InvalidVersion()) {
+		t.Error("no invalid version")
+	}
+	a.chooseVersion("2.1.288")
+	tt.Frame()
+	if !a.verKeep {
+		t.Error("an older version is not kept")
+	}
+	cmd := install.VersionCommand(install.Native, in.Path, "2.1.288")
+	if !tt.HasText("$ " + cmd) {
+		t.Errorf("no command in %q", tt.Texts())
+	}
+	if err := tt.Click(locales.InstallThis("2.1.288")); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if a.verOpen || a.instDone != cmd || a.instErr != "" || !slices.Contains(a.instLog, "installing 2.1.288") {
+		t.Fatalf("run: open %v done %q err %q log %q", a.verOpen, a.instDone, a.instErr, a.instLog)
+	}
+	data, _ := os.ReadFile(filepath.Join(a.env.MainDir(), "settings.json"))
+	if !strings.Contains(string(data), `"DISABLE_AUTOUPDATER": "1"`) {
+		t.Errorf("settings.json:\n%s", data)
+	}
+	// Use on a native version opens the dialog with it.
+	a.verOpen = false
+	tt.Frame()
+	if err := tt.Click(locales.Use()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !a.verOpen || a.verWant != "2.1.289" {
+		t.Errorf("use: open %v want %q", a.verOpen, a.verWant)
+	}
+	if canChooseVersion(&install.Install{Kind: install.Homebrew}) {
+		t.Error("homebrew chooses a version")
 	}
 }
 

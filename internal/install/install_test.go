@@ -137,3 +137,44 @@ func TestCompare(t *testing.T) {
 		t.Error("compare")
 	}
 }
+
+func TestAvailable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Accept") != "application/vnd.npm.install-v1+json" {
+			t.Errorf("accept %q", r.Header.Get("Accept"))
+		}
+		w.Write([]byte(`{"name":"@anthropic-ai/claude-code","versions":{"2.1.9":{},"2.1.10":{},"2.2.0-beta.1":{},"1.0.0":{}}}`))
+	}))
+	defer srv.Close()
+	client := srv.Client()
+	client.Transport = rewrite{srv.URL, http.DefaultTransport}
+	vs, err := Available(context.Background(), client, 0)
+	if err != nil || !slices.Equal(vs, []string{"2.1.10", "2.1.9", "1.0.0"}) {
+		t.Errorf("available %q %v", vs, err)
+	}
+	vs, _ = Available(context.Background(), client, 2)
+	if !slices.Equal(vs, []string{"2.1.10", "2.1.9"}) {
+		t.Errorf("limited %q", vs)
+	}
+}
+
+func TestVersionCommand(t *testing.T) {
+	for _, tc := range []struct {
+		kind    Kind
+		version string
+		want    string
+	}{
+		{Native, "2.1.288", "'/a b/claude' install 2.1.288"},
+		{NPM, "2.1.288", "npm install -g @anthropic-ai/claude-code@2.1.288"},
+		{Bun, "2.1.288", "bun add -g @anthropic-ai/claude-code@2.1.288"},
+		{Homebrew, "2.1.288", ""},
+		{Other, "2.1.288", ""},
+		{NPM, "latest", ""},
+		{NPM, "2.1.288; rm -rf ~", ""},
+		{Native, "2.1", ""},
+	} {
+		if got := VersionCommand(tc.kind, "/a b/claude", tc.version); got != tc.want {
+			t.Errorf("%s %q: %q, want %q", tc.kind, tc.version, got, tc.want)
+		}
+	}
+}

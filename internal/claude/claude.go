@@ -494,6 +494,41 @@ func CopyMCP(from, to *Profile) ([]string, error) {
 	return added, WriteObject(to.ConfigFile, dst, jsonedit.Indent(data))
 }
 
+// DisableAutoUpdate sets DISABLE_AUTOUPDATER in the env of dir's
+// settings.json, so that Claude Code keeps the version installed rather
+// than updating itself. The rest of the file stays as it was.
+func DisableAutoUpdate(dir string) error {
+	path := filepath.Join(dir, "settings.json")
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		data = []byte("{}")
+	} else if err != nil {
+		return err
+	}
+	o, err := jsonedit.Parse(data)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	env, err := subObject(o, "env")
+	if err != nil {
+		return fmt.Errorf("%s: env: %w", path, err)
+	}
+	if env == nil {
+		env, _ = jsonedit.Parse([]byte("{}"))
+	}
+	var cur string
+	if ok, _ := env.Get("DISABLE_AUTOUPDATER", &cur); ok && cur == "1" {
+		return nil
+	}
+	env.Set("DISABLE_AUTOUPDATER", "1")
+	raw, err := env.Marshal("")
+	if err != nil {
+		return err
+	}
+	o.SetRaw("env", raw)
+	return WriteObject(path, o, jsonedit.Indent(data))
+}
+
 func readObject(path string) (*jsonedit.Object, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

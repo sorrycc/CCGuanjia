@@ -101,6 +101,16 @@ type app struct {
 	reinstallQ  bool
 	removeVerQ  bool
 	chosenVers  map[string]bool
+	// The Install Version dialog: the version typed or chosen, whether to
+	// turn auto-update off after, and npm's versions, which available
+	// lists (as install.Available does but for tests).
+	verOpen    bool
+	verWant    string
+	verKeep    bool
+	verList    []string
+	verListErr bool
+	verListing bool
+	available  func() ([]string, error)
 
 	// Cleanup.
 	plans      map[string]*clean.Plan
@@ -505,11 +515,30 @@ func (a *app) installDetect() (*install.Info, string, string) {
 // runInstall runs an update or a reinstall, showing its output.
 func (a *app) runInstall(action install.Action) {
 	in := a.inst.Active()
-	if in == nil || a.instBusy != "" {
+	if in == nil {
 		return
 	}
-	cmd := install.Command(in.Kind, action, in.Path)
-	if cmd == "" {
+	a.runCommand(install.Command(in.Kind, action, in.Path), nil)
+}
+
+// installVersion installs version in place of the install that runs,
+// and then, when keep, turns auto-update off in ~/.claude/settings.json.
+func (a *app) installVersion(version string, keep bool) {
+	in := a.inst.Active()
+	if in == nil {
+		return
+	}
+	var after func() error
+	if keep {
+		after = func() error { return claude.DisableAutoUpdate(a.env.MainDir()) }
+	}
+	a.runCommand(install.VersionCommand(in.Kind, in.Path, version), after)
+}
+
+// runCommand runs an install command, showing its output, and after it
+// when it succeeds.
+func (a *app) runCommand(cmd string, after func() error) {
+	if cmd == "" || a.instBusy != "" {
 		return
 	}
 	a.instBusy, a.instLog, a.instErr, a.instDone = cmd, nil, "", ""
@@ -522,19 +551,63 @@ func (a *app) runInstall(action install.Action) {
 			}
 			a.post(func() { a.instLog = appendLog(a.instLog, l) })
 		})
+		var afterErr error
+		if err == nil && after != nil {
+			afterErr = after()
+		}
 		return func() {
 			for _, l := range lines {
 				a.instLog = appendLog(a.instLog, l)
 			}
 			a.instBusy = ""
-			if err != nil {
+			switch {
+			case err != nil:
 				a.instErr = errText(err)
-			} else {
+			case afterErr != nil:
 				a.instDone = cmd
+				a.instErr = errText(afterErr)
+			default:
+				a.instDone = cmd
+				if after != nil {
+					a.toast(locales.AutoUpdateOff(a.shortPath(filepath.Join(a.env.MainDir(), "settings.json"))))
+				}
 			}
 			a.loadInstall()
 		}
 	})
+}
+
+// openVersionDialog opens Install Version with version filled in, and
+// fetches npm's versions the first time.
+func (a *app) openVersionDialog(version string) {
+	a.verOpen = true
+	a.chooseVersion(version)
+	if a.verList != nil || a.verListing {
+		return
+	}
+	a.verListing, a.verListErr = true, false
+	available := a.available
+	if available == nil {
+		available = func() ([]string, error) { return install.Available(context.Background(), nil, 100) }
+	}
+	a.do(func() func() {
+		vs, err := available()
+		return func() {
+			a.verListing = false
+			if err != nil {
+				a.verListErr = true
+				return
+			}
+			a.verList = vs
+		}
+	})
+}
+
+// chooseVersion fills in version, keeping it from auto-update when it is
+// older than the newest.
+func (a *app) chooseVersion(version string) {
+	a.verWant = version
+	a.verKeep = version != "" && a.latest != "" && install.Compare(version, a.latest) < 0
 }
 
 func appendLog(log []string, line string) []string {

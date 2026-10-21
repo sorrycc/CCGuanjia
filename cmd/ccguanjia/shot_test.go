@@ -27,6 +27,7 @@ func TestShots(t *testing.T) {
 			{"overview-full", pageOverview, "", 1720},
 			{"profile", pageProfile, "work", 860},
 			{"install", pageInstall, "", 860},
+			{"install-version", pageInstall, "", 860},
 			{"cleanup", pageCleanup, "", 860},
 			{"settings", pageSettings, "", 860},
 			{"palette", pageOverview, "", 860},
@@ -36,6 +37,10 @@ func TestShots(t *testing.T) {
 			if page.name == "palette" {
 				a.openPalette()
 				a.paletteSel = 2
+			}
+			if page.name == "install-version" {
+				a.available = func() ([]string, error) { return []string{"2.1.303", "2.1.302", "2.1.301", "2.1.289", "2.1.288"}, nil }
+				a.openVersionDialog("2.1.289")
 			}
 			tt := newTester(a.view, 1240, page.height)
 			tt.SetScale(2)

@@ -94,6 +94,16 @@ func (msgs Messages) ArchivedFirst() string {
 	return Catalog.Format(msgs.locale, "archivedFirst", nil)
 }
 
+// AutoUpdateOff says "Auto-update is off in {file}"
+// in the language the app shows.
+func AutoUpdateOff(file string) string { return In(i18n.Locale()).AutoUpdateOff(file) }
+
+// AutoUpdateOff says "Auto-update is off in {file}"
+// in the language of msgs.
+func (msgs Messages) AutoUpdateOff(file string) string {
+	return Catalog.Format(msgs.locale, "autoUpdateOff", map[string]any{"file": file})
+}
+
 // BackUpAndClean says "Back Up and Clean"
 // in the language the app shows.
 func BackUpAndClean() string { return In(i18n.Locale()).BackUpAndClean() }
@@ -706,6 +716,16 @@ func (msgs Messages) Done() string {
 	return Catalog.Format(msgs.locale, "done", nil)
 }
 
+// Downloaded says "downloaded"
+// in the language the app shows.
+func Downloaded() string { return In(i18n.Locale()).Downloaded() }
+
+// Downloaded says "downloaded"
+// in the language of msgs.
+func (msgs Messages) Downloaded() string {
+	return Catalog.Format(msgs.locale, "downloaded", nil)
+}
+
 // DropDeadAllow says "{count, plural, =0 {No dead or repeated allow entries} one {Drop # dead or repeated allow entry} other {Drop # dead o…"
 // in the language the app shows.
 func DropDeadAllow(count int) string { return In(i18n.Locale()).DropDeadAllow(count) }
@@ -784,6 +804,16 @@ func EstimatedBackup() string { return In(i18n.Locale()).EstimatedBackup() }
 // in the language of msgs.
 func (msgs Messages) EstimatedBackup() string {
 	return Catalog.Format(msgs.locale, "estimatedBackup", nil)
+}
+
+// FetchingVersions says "Fetching versions…"
+// in the language the app shows.
+func FetchingVersions() string { return In(i18n.Locale()).FetchingVersions() }
+
+// FetchingVersions says "Fetching versions…"
+// in the language of msgs.
+func (msgs Messages) FetchingVersions() string {
+	return Catalog.Format(msgs.locale, "fetchingVersions", nil)
 }
 
 // FilesCount says "{count, plural, one {# file} other {# files}}"
@@ -896,6 +926,46 @@ func (msgs Messages) InstallSubtitle() string {
 	return Catalog.Format(msgs.locale, "installSubtitle", nil)
 }
 
+// InstallThis says "Install {version}"
+// in the language the app shows.
+func InstallThis(version string) string { return In(i18n.Locale()).InstallThis(version) }
+
+// InstallThis says "Install {version}"
+// in the language of msgs.
+func (msgs Messages) InstallThis(version string) string {
+	return Catalog.Format(msgs.locale, "installThis", map[string]any{"version": version})
+}
+
+// InstallVersion says "Install a Version"
+// in the language the app shows.
+func InstallVersion() string { return In(i18n.Locale()).InstallVersion() }
+
+// InstallVersion says "Install a Version"
+// in the language of msgs.
+func (msgs Messages) InstallVersion() string {
+	return Catalog.Format(msgs.locale, "installVersion", nil)
+}
+
+// InstallVersionButton says "Install Version…"
+// in the language the app shows.
+func InstallVersionButton() string { return In(i18n.Locale()).InstallVersionButton() }
+
+// InstallVersionButton says "Install Version…"
+// in the language of msgs.
+func (msgs Messages) InstallVersionButton() string {
+	return Catalog.Format(msgs.locale, "installVersionButton", nil)
+}
+
+// InstallVersionNote says "Installs the version you choose in place of the one that runs, with the official command of the way it was installed."
+// in the language the app shows.
+func InstallVersionNote() string { return In(i18n.Locale()).InstallVersionNote() }
+
+// InstallVersionNote says "Installs the version you choose in place of the one that runs, with the official command of the way it was installed."
+// in the language of msgs.
+func (msgs Messages) InstallVersionNote() string {
+	return Catalog.Format(msgs.locale, "installVersionNote", nil)
+}
+
 // Installed says "Installed"
 // in the language the app shows.
 func Installed() string { return In(i18n.Locale()).Installed() }
@@ -926,6 +996,16 @@ func (msgs Messages) InstallsCount(count int) string {
 	return Catalog.Format(msgs.locale, "installsCount", map[string]any{"count": count})
 }
 
+// InvalidVersion says "A version is x.y.z, like 2.1.288."
+// in the language the app shows.
+func InvalidVersion() string { return In(i18n.Locale()).InvalidVersion() }
+
+// InvalidVersion says "A version is x.y.z, like 2.1.288."
+// in the language of msgs.
+func (msgs Messages) InvalidVersion() string {
+	return Catalog.Format(msgs.locale, "invalidVersion", nil)
+}
+
 // JustNow says "just now"
 // in the language the app shows.
 func JustNow() string { return In(i18n.Locale()).JustNow() }
@@ -934,6 +1014,26 @@ func JustNow() string { return In(i18n.Locale()).JustNow() }
 // in the language of msgs.
 func (msgs Messages) JustNow() string {
 	return Catalog.Format(msgs.locale, "justNow", nil)
+}
+
+// KeepVersion says "Keep this version: turn off auto-update"
+// in the language the app shows.
+func KeepVersion() string { return In(i18n.Locale()).KeepVersion() }
+
+// KeepVersion says "Keep this version: turn off auto-update"
+// in the language of msgs.
+func (msgs Messages) KeepVersion() string {
+	return Catalog.Format(msgs.locale, "keepVersion", nil)
+}
+
+// KeepVersionNote says "Sets DISABLE_AUTOUPDATER in {file}. Remove it there to update automatically again."
+// in the language the app shows.
+func KeepVersionNote(file string) string { return In(i18n.Locale()).KeepVersionNote(file) }
+
+// KeepVersionNote says "Sets DISABLE_AUTOUPDATER in {file}. Remove it there to update automatically again."
+// in the language of msgs.
+func (msgs Messages) KeepVersionNote(file string) string {
+	return Catalog.Format(msgs.locale, "keepVersionNote", map[string]any{"file": file})
 }
 
 // KeptNote says "Never touched: skills, plugins, hooks, CLAUDE.md, history.jsonl, and anything that is a link."
@@ -1374,6 +1474,16 @@ func NoUpdateCommand() string { return In(i18n.Locale()).NoUpdateCommand() }
 // in the language of msgs.
 func (msgs Messages) NoUpdateCommand() string {
 	return Catalog.Format(msgs.locale, "noUpdateCommand", nil)
+}
+
+// NoVersionCommand says "Homebrew's cask installs only the newest version."
+// in the language the app shows.
+func NoVersionCommand() string { return In(i18n.Locale()).NoVersionCommand() }
+
+// NoVersionCommand says "Homebrew's cask installs only the newest version."
+// in the language of msgs.
+func (msgs Messages) NoVersionCommand() string {
+	return Catalog.Format(msgs.locale, "noVersionCommand", nil)
 }
 
 // NoneFound says "None found."
@@ -1904,6 +2014,16 @@ func Range7d() string { return In(i18n.Locale()).Range7d() }
 // in the language of msgs.
 func (msgs Messages) Range7d() string {
 	return Catalog.Format(msgs.locale, "range7d", nil)
+}
+
+// RecentVersions says "Recent versions"
+// in the language the app shows.
+func RecentVersions() string { return In(i18n.Locale()).RecentVersions() }
+
+// RecentVersions says "Recent versions"
+// in the language of msgs.
+func (msgs Messages) RecentVersions() string {
+	return Catalog.Format(msgs.locale, "recentVersions", nil)
 }
 
 // Reclaimable says "Reclaimable"
@@ -2688,6 +2808,16 @@ func (msgs Messages) Updates() string {
 	return Catalog.Format(msgs.locale, "updates", nil)
 }
 
+// Use says "Use"
+// in the language the app shows.
+func Use() string { return In(i18n.Locale()).Use() }
+
+// Use says "Use"
+// in the language of msgs.
+func (msgs Messages) Use() string {
+	return Catalog.Format(msgs.locale, "use", nil)
+}
+
 // VariantsNote says "Also deleted after a copy: {names} ({size})."
 // in the language the app shows.
 func VariantsNote(names string, size string) string {
@@ -2698,6 +2828,16 @@ func VariantsNote(names string, size string) string {
 // in the language of msgs.
 func (msgs Messages) VariantsNote(names string, size string) string {
 	return Catalog.Format(msgs.locale, "variantsNote", map[string]any{"names": names, "size": size})
+}
+
+// Version says "Version"
+// in the language the app shows.
+func Version() string { return In(i18n.Locale()).Version() }
+
+// Version says "Version"
+// in the language of msgs.
+func (msgs Messages) Version() string {
+	return Catalog.Format(msgs.locale, "version", nil)
 }
 
 // VersionsCount says "{count, plural, one {# version} other {# versions}}"
@@ -2740,6 +2880,16 @@ func VersionsRemoved(count int, size string) string {
 // in the language of msgs.
 func (msgs Messages) VersionsRemoved(count int, size string) string {
 	return Catalog.Format(msgs.locale, "versionsRemoved", map[string]any{"count": count, "size": size})
+}
+
+// VersionsUnavailable says "Couldn't fetch the list of versions. You can still type one."
+// in the language the app shows.
+func VersionsUnavailable() string { return In(i18n.Locale()).VersionsUnavailable() }
+
+// VersionsUnavailable says "Couldn't fetch the list of versions. You can still type one."
+// in the language of msgs.
+func (msgs Messages) VersionsUnavailable() string {
+	return Catalog.Format(msgs.locale, "versionsUnavailable", nil)
 }
 
 // Weekdays says "Sun Mon Tue Wed Thu Fri Sat"
