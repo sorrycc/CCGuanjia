@@ -33,7 +33,11 @@ func (a *app) view(c *ui.Context) {
 		side.Children(func() { a.sidebar(c, p) })
 		ui.Column(c).Grow(1).MinWidth(0).Background(p.content).Children(func() {
 			a.header(c, p)
-			ui.Scroll(c.Key(a.page+"/"+a.current)).Grow(1).Padding(4, 24, 28).Gap(20).Children(func() {
+			scope := a.current
+			if a.page == pageOverview && a.overviewAll {
+				scope = "*"
+			}
+			ui.Scroll(c.Key(a.page+"/"+scope)).Grow(1).Padding(4, 24, 28).Gap(20).Children(func() {
 				switch a.page {
 				case pageOverview:
 					a.overview(c, p)
@@ -71,6 +75,7 @@ func (a *app) shortcuts(c *ui.Context) {
 }
 
 // stepProfile shows the profile after the current one, or before it.
+// Overview steps through all of them first.
 func (a *app) stepProfile(d int) {
 	if len(a.profiles) == 0 {
 		return
@@ -80,6 +85,20 @@ func (a *app) stepProfile(d int) {
 		if pr.Name == a.current {
 			i = j
 		}
+	}
+	if a.page == pageOverview {
+		// All is -1, before the first profile.
+		if a.overviewAll {
+			i = -1
+		}
+		n := len(a.profiles) + 1
+		i = (i+1+d+n)%n - 1
+		if i < 0 {
+			a.showAll()
+		} else {
+			a.show(pageOverview, a.profiles[i].Name)
+		}
+		return
 	}
 	i = (i + d + len(a.profiles)) % len(a.profiles)
 	page := a.page
@@ -239,7 +258,15 @@ func (a *app) header(c *ui.Context, p palette) {
 	switch a.page {
 	case pageOverview:
 		title = locales.PageOverview()
-		if cur != nil {
+		if a.overviewAll {
+			signed := 0
+			for _, q := range a.profiles {
+				if q.SignedIn {
+					signed++
+				}
+			}
+			sub = locales.ProfilesCount(len(a.profiles)) + " · " + locales.SignedInOf(signed, len(a.profiles))
+		} else if cur != nil {
 			sub = a.profileTitle(cur)
 		}
 	case pageProfile:
@@ -263,7 +290,23 @@ func (a *app) header(c *ui.Context, p palette) {
 				ui.Text(c, sub).FontSize(12).TextColor(p.muted).SingleLine().ContentTransition(ui.ContentTransition{})
 			}
 		})
-		if (a.page == pageOverview || a.page == pageCleanup) && len(a.profiles) > 1 {
+		switch {
+		case a.page == pageOverview && len(a.profiles) > 1:
+			// All profiles comes first; no profile can take its name, as
+			// those are lowercase.
+			names := append([]string{locales.AllProfiles()}, a.profileNames()...)
+			name := a.current
+			if a.overviewAll {
+				name = names[0]
+			}
+			if ui.Select(c.Key("profile-select"), &name, names).Label(locales.Profile()).Width(170).Changed() {
+				if name == names[0] {
+					a.showAll()
+				} else {
+					a.show(a.page, name)
+				}
+			}
+		case a.page == pageCleanup && len(a.profiles) > 1:
 			name := a.current
 			if ui.Select(c.Key("profile-select"), &name, a.profileNames()).Label(locales.Profile()).Width(170).Changed() {
 				a.show(a.page, name)

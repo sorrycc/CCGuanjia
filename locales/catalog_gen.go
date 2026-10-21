@@ -44,6 +44,16 @@ func (msgs Messages) AfterCleanup() string {
 	return Catalog.Format(msgs.locale, "afterCleanup", nil)
 }
 
+// AllProfiles says "All profiles"
+// in the language the app shows.
+func AllProfiles() string { return In(i18n.Locale()).AllProfiles() }
+
+// AllProfiles says "All profiles"
+// in the language of msgs.
+func (msgs Messages) AllProfiles() string {
+	return Catalog.Format(msgs.locale, "allProfiles", nil)
+}
+
 // AlsoSignOut says "Also sign out of this profile"
 // in the language the app shows.
 func AlsoSignOut() string { return In(i18n.Locale()).AlsoSignOut() }
@@ -172,6 +182,16 @@ func CardAccount() string { return In(i18n.Locale()).CardAccount() }
 // in the language of msgs.
 func (msgs Messages) CardAccount() string {
 	return Catalog.Format(msgs.locale, "cardAccount", nil)
+}
+
+// CardAccounts says "Accounts"
+// in the language the app shows.
+func CardAccounts() string { return In(i18n.Locale()).CardAccounts() }
+
+// CardAccounts says "Accounts"
+// in the language of msgs.
+func (msgs Messages) CardAccounts() string {
+	return Catalog.Format(msgs.locale, "cardAccounts", nil)
 }
 
 // CardActivity says "Activity by Hour"
@@ -1824,6 +1844,16 @@ func ProfileName() string { return In(i18n.Locale()).ProfileName() }
 // in the language of msgs.
 func (msgs Messages) ProfileName() string {
 	return Catalog.Format(msgs.locale, "profileName", nil)
+}
+
+// ProfilesCount says "{count, plural, one {# profile} other {# profiles}}"
+// in the language the app shows.
+func ProfilesCount(count int) string { return In(i18n.Locale()).ProfilesCount(count) }
+
+// ProfilesCount says "{count, plural, one {# profile} other {# profiles}}"
+// in the language of msgs.
+func (msgs Messages) ProfilesCount(count int) string {
+	return Catalog.Format(msgs.locale, "profilesCount", map[string]any{"count": count})
 }
 
 // Projects says "Projects"

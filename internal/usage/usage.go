@@ -103,6 +103,8 @@ type Session struct {
 	Tokens      int64
 	// Model is the model of most of its tokens.
 	Model string
+	// Profile is the profile whose transcript it is, as Merge tells it.
+	Profile string
 }
 
 // Share is the tokens of a model or a project.
@@ -193,6 +195,60 @@ func (s *Scanner) Scan(dir string, since, now time.Time, n int) Summary {
 	sum.Models = shares(models)
 	sum.Projects = shares(projects)
 	return sum
+}
+
+// Merge sums the summaries of several profiles, all of the same window
+// and buckets, keyed by the profile's name, which each session takes.
+func Merge(sums map[string]Summary) Summary {
+	var out Summary
+	models := map[string]int64{}
+	projects := map[string]int64{}
+	names := make([]string, 0, len(sums))
+	for name := range sums {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		s := sums[name]
+		if out.Buckets == nil {
+			out.Since, out.Until = s.Since, s.Until
+			out.Buckets, out.Counts = make([]int64, len(s.Buckets)), make([]int64, len(s.Counts))
+		}
+		out.Tokens.add(s.Tokens)
+		out.Replies += s.Replies
+		out.Sessions += s.Sessions
+		for i := range min(len(out.Buckets), len(s.Buckets)) {
+			out.Buckets[i] += s.Buckets[i]
+		}
+		for i := range min(len(out.Counts), len(s.Counts)) {
+			out.Counts[i] += s.Counts[i]
+		}
+		for d := range s.Hours {
+			for h, n := range s.Hours[d] {
+				out.Hours[d][h] += n
+			}
+		}
+		for _, m := range s.Models {
+			models[m.Name] += m.Tokens
+		}
+		for _, p := range s.Projects {
+			projects[p.Name] += p.Tokens
+		}
+		for _, r := range s.Recent {
+			r.Profile = name
+			out.Recent = append(out.Recent, r)
+		}
+		out.Prev.Tokens.add(s.Prev.Tokens)
+		out.Prev.Replies += s.Prev.Replies
+		out.Prev.Sessions += s.Prev.Sessions
+	}
+	sort.SliceStable(out.Recent, func(i, j int) bool { return out.Recent[i].Last.After(out.Recent[j].Last) })
+	if len(out.Recent) > RecentSessions {
+		out.Recent = out.Recent[:RecentSessions]
+	}
+	out.Models = shares(models)
+	out.Projects = shares(projects)
+	return out
 }
 
 // sessionAcc sums the replies of a session.
@@ -382,6 +438,39 @@ func MeasureStorage(dir string) Storage {
 	}
 	sortEntries(st.ByProject)
 	return st
+}
+
+// MergeStorage sums what several folders take: the files and folders of
+// the same name as one, and the projects of the same folder as one.
+func MergeStorage(sts []Storage) Storage {
+	var out Storage
+	types := map[string]int{}
+	projects := map[string]int{}
+	for _, st := range sts {
+		out.Total += st.Total
+		for _, e := range st.ByType {
+			if i, ok := types[e.Name]; ok {
+				out.ByType[i].Bytes += e.Bytes
+				continue
+			}
+			types[e.Name] = len(out.ByType)
+			out.ByType = append(out.ByType, e)
+		}
+		for _, e := range st.ByProject {
+			if i, ok := projects[e.Name]; ok {
+				out.ByProject[i].Bytes += e.Bytes
+				if out.ByProject[i].Path == "" {
+					out.ByProject[i].Path = e.Path
+				}
+				continue
+			}
+			projects[e.Name] = len(out.ByProject)
+			out.ByProject = append(out.ByProject, e)
+		}
+	}
+	sortEntries(out.ByType)
+	sortEntries(out.ByProject)
+	return out
 }
 
 func sortEntries(es []Entry) {

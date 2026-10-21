@@ -21,9 +21,9 @@ import (
 	"ccguanjia/locales"
 )
 
-// overview is the dashboard of the current profile: its account, tokens
-// and sessions, what Claude Code is, what the folder takes, and the
-// profiles.
+// overview is the dashboard of every profile, or of the current one: the
+// accounts, tokens and sessions, what Claude Code is, what the folders
+// take, and the profiles.
 func (a *app) overview(c *ui.Context, p palette) {
 	pr := a.cur()
 	if pr == nil {
@@ -31,50 +31,26 @@ func (a *app) overview(c *ui.Context, p palette) {
 		return
 	}
 	sum := a.summary
-	if sum != nil && a.summaryKey != fmt.Sprintf("%s/%d", pr.Name, a.rangeIdx) {
+	if sum != nil && a.summaryKey != a.usageKey() {
 		sum = nil
 	}
-	st := a.storage[pr.Name]
+	st := a.overviewStorage()
+	signed := 0
+	for _, q := range a.profiles {
+		if q.SignedIn {
+			signed++
+		}
+	}
 
 	ui.Grid(c).Columns(3).Gap(20).Children(func() {
-		// Account.
-		card(c, p, iconUser, p.blue, locales.CardAccount(), "", func() { a.show(pageProfile, pr.Name) }, func() {
-			ui.Box(c).Children(func() {
-				plan, label := "—", locales.Plan()
-				if pr.Account != nil && pr.Account.Plan != "" {
-					plan = pr.Account.Plan
-				}
-				bigValue(c, p, label, plan, "")
-				if pr.SignedIn {
-					cornerPill(c, p, iconCheck, p.green, locales.SignedIn())
-				} else {
-					cornerPill(c, p, iconAlert, p.red, locales.SignedOut())
-				}
+		// Accounts.
+		if a.overviewAll {
+			card(c, p, iconUser, p.blue, locales.CardAccounts(), locales.SignedInOf(signed, len(a.profiles)), nil, func() {
+				a.accountList(c, p)
 			})
-			org, name := "—", "—"
-			if acc := pr.Account; acc != nil {
-				if acc.Org != "" {
-					org = acc.Org
-				}
-				if acc.Name != "" {
-					name = acc.Name
-				}
-			}
-			launcher := "claude"
-			if !pr.Default {
-				launcher = shell.FunctionName(pr.Name)
-			}
-			stats(c, p, stat{locales.Name(), name}, stat{locales.Organization(), org}, stat{locales.Launcher(), launcher})
-			linked, total := a.linkCount(pr.Name)
-			ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(4, 0, 0).Children(func() {
-				ui.Icon(c, iconLink).Size(14, 14).TextColor(p.muted)
-				if pr.Default {
-					ui.Text(c, locales.MainFolderNote()).FontSize(13).TextColor(p.muted).SingleLine()
-				} else {
-					ui.Text(c, locales.SharedCount(linked, total)).FontSize(13).TextColor(p.muted).SingleLine()
-				}
-			})
-		})
+		} else {
+			a.overviewAccount(c, p, pr)
+		}
 
 		// Tokens.
 		card(c, p, iconActivity, p.green, locales.CardTokens(), "", nil, func() {
@@ -145,16 +121,20 @@ func (a *app) overview(c *ui.Context, p palette) {
 		})
 
 		// Storage.
+		where := a.shortPath(pr.Dir)
+		if a.overviewAll {
+			where = locales.AllProfiles()
+		}
 		card(c, p, iconDisk, p.orange, locales.CardStorage(), "", func() { a.show(pageCleanup, "") }, func() {
 			if st == nil {
-				loadingValue(c, p, a.shortPath(pr.Dir))
+				loadingValue(c, p, where)
 				return
 			}
 			n, unit := splitNumber(clean.Size(st.Total))
-			bigValue(c, p, a.shortPath(pr.Dir), n, unit)
+			bigValue(c, p, where, n, unit)
 			reclaim := "—"
-			if pl := a.plans[pr.Name]; pl != nil {
-				reclaim = clean.Size(pl.Reclaim())
+			if r, ok := a.reclaimable(pr); ok {
+				reclaim = clean.Size(r)
 			}
 			stats(c, p, stat{"projects", clean.Size(entryBytes(st.ByType, "projects"))},
 				stat{"file-history", clean.Size(entryBytes(st.ByType, "file-history"))},
@@ -196,12 +176,6 @@ func (a *app) overview(c *ui.Context, p palette) {
 		})
 
 		// Profiles, and the tokens of each over the range.
-		signed := 0
-		for _, q := range a.profiles {
-			if q.SignedIn {
-				signed++
-			}
-		}
 		card(c, p, iconUsers, p.purple, locales.CardProfiles(), locales.SignedInOf(signed, len(a.profiles)), nil, func() {
 			ui.Box(c).Children(func() {
 				bigValue(c, p, locales.OnThisMac(), fmt.Sprint(len(a.profiles)), "")
@@ -327,8 +301,95 @@ func (a *app) overview(c *ui.Context, p palette) {
 				loadingList(c, p, 4)
 				return
 			}
-			a.recentSessions(c, p, pr, sum)
+			a.recentSessions(c, p, sum)
 		}).ColumnSpan(3)
+	})
+}
+
+// overviewAccount is the account of a profile: its plan, sign-in, name,
+// organization and launcher, and how much it shares with ~/.claude.
+func (a *app) overviewAccount(c *ui.Context, p palette, pr *claude.Profile) {
+	card(c, p, iconUser, p.blue, locales.CardAccount(), "", func() { a.show(pageProfile, pr.Name) }, func() {
+		ui.Box(c).Children(func() {
+			plan, label := "—", locales.Plan()
+			if pr.Account != nil && pr.Account.Plan != "" {
+				plan = pr.Account.Plan
+			}
+			bigValue(c, p, label, plan, "")
+			if pr.SignedIn {
+				cornerPill(c, p, iconCheck, p.green, locales.SignedIn())
+			} else {
+				cornerPill(c, p, iconAlert, p.red, locales.SignedOut())
+			}
+		})
+		org, name := "—", "—"
+		if acc := pr.Account; acc != nil {
+			if acc.Org != "" {
+				org = acc.Org
+			}
+			if acc.Name != "" {
+				name = acc.Name
+			}
+		}
+		launcher := "claude"
+		if !pr.Default {
+			launcher = shell.FunctionName(pr.Name)
+		}
+		stats(c, p, stat{locales.Name(), name}, stat{locales.Organization(), org}, stat{locales.Launcher(), launcher})
+		linked, total := a.linkCount(pr.Name)
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(4, 0, 0).Children(func() {
+			ui.Icon(c, iconLink).Size(14, 14).TextColor(p.muted)
+			if pr.Default {
+				ui.Text(c, locales.MainFolderNote()).FontSize(13).TextColor(p.muted).SingleLine()
+			} else {
+				ui.Text(c, locales.SharedCount(linked, total)).FontSize(13).TextColor(p.muted).SingleLine()
+			}
+		})
+	})
+}
+
+// accountList is a row for each profile's account: its email, plan and
+// sign-in. A click shows the profile.
+func (a *app) accountList(c *ui.Context, p palette) {
+	const most = 4
+	ui.Column(c).Gap(4).Children(func() {
+		for i, pr := range a.profiles {
+			if i == most {
+				break
+			}
+			r := ui.Row(c.Key("account-"+pr.Name)).Gap(10).AlignItems(ui.Center).Padding(5, 6).Margin(0, -6).Radius(8).
+				Cursor(ui.CursorPointer).Label(pr.Name).Transition(quick)
+			if r.Hovered() {
+				r.Background(p.hover())
+			}
+			r.OnClick(func() { a.show(pageProfile, pr.Name) }).Children(func() {
+				avatar(c, p, pr.Name, a.profileColor(p, pr.Name), 26, a.live(pr.Name), p.card)
+				ui.Column(c).Gap(2).Grow(1).MinWidth(0).Children(func() {
+					email, plan := "—", "—"
+					if acc := pr.Account; acc != nil {
+						if acc.Email != "" {
+							email = acc.Email
+						}
+						if acc.Plan != "" {
+							plan = acc.Plan
+						}
+					}
+					ui.Row(c).Gap(8).Children(func() {
+						ui.Text(c, pr.Name).FontSize(13).FontWeight(600).TextColor(p.text).SingleLine().Grow(1).Shrink(1).MinWidth(0)
+						ui.Text(c, plan).FontSize(12).TextColor(p.muted).SingleLine().Shrink(0)
+					})
+					ui.Text(c, email).FontSize(12).TextColor(p.muted).SingleLine()
+				})
+				if pr.SignedIn {
+					ui.Icon(c, iconCheck).Size(14, 14).TextColor(p.green).Tooltip(locales.SignedIn())
+				} else {
+					ui.Icon(c, iconAlert).Size(14, 14).TextColor(p.red).Tooltip(locales.SignedOut())
+				}
+			})
+		}
+		if n := len(a.profiles) - most; n > 0 {
+			ui.Text(c, locales.MoreProfiles(n)).FontSize(12).TextColor(p.faint).Padding(2, 0, 0)
+		}
 	})
 }
 
@@ -461,8 +522,9 @@ func heatmap(c *ui.Context, p palette, color ui.Color, sum *usage.Summary) {
 }
 
 // recentSessions lists the sessions active last, each with its folder,
-// model, size and when, and a button resuming it in the terminal.
-func (a *app) recentSessions(c *ui.Context, p palette, pr *claude.Profile, sum *usage.Summary) {
+// profile when Overview shows them all, model, size and when, and a button
+// resuming it in the terminal.
+func (a *app) recentSessions(c *ui.Context, p palette, sum *usage.Summary) {
 	if len(sum.Recent) == 0 {
 		ui.Text(c, locales.NoSessions()).FontSize(13).TextColor(p.muted)
 		return
@@ -474,7 +536,7 @@ func (a *app) recentSessions(c *ui.Context, p palette, pr *claude.Profile, sum *
 	}
 	ui.Column(c).Dividers(1, p.border).Gap(1).Children(func() {
 		for _, s := range shown {
-			r := ui.Row(c.Key(s.ID)).Gap(14).AlignItems(ui.Center).Padding(9, 8).Radius(10).
+			r := ui.Row(c.Key(s.Profile+"/"+s.ID)).Gap(14).AlignItems(ui.Center).Padding(9, 8).Radius(10).
 				Transition(ui.ElementTransition{Colors: true, Position: true, Duration: 220 * time.Millisecond,
 					Enter: &ui.Motion{Collapse: true}, Exit: &ui.Motion{Collapse: true}})
 			hovered := r.Hovered()
@@ -491,6 +553,12 @@ func (a *app) recentSessions(c *ui.Context, p palette, pr *claude.Profile, sum *
 					ui.Text(c, name).FontSize(14).FontWeight(600).TextColor(p.text).SingleLine()
 					ui.Text(c, a.shortPath(s.Project)).FontSize(12).TextColor(p.muted).SingleLine()
 				})
+				if a.overviewAll {
+					ui.Row(c).Gap(6).AlignItems(ui.Center).Width(100).Shrink(0).Children(func() {
+						avatar(c, p, s.Profile, a.profileColor(p, s.Profile), 18, false, p.card)
+						ui.Text(c, s.Profile).FontSize(12).TextColor(p.muted).SingleLine().Shrink(1).MinWidth(0)
+					})
+				}
 				ui.Text(c, strings.TrimPrefix(s.Model, "claude-")).FontSize(12).TextColor(p.muted).SingleLine().Width(110).Shrink(0)
 				ui.Text(c, locales.RepliesCount(s.Replies)).FontSize(12).TextColor(p.muted).FontFeatures("tnum").SingleLine().Width(90).Shrink(0)
 				ui.Text(c, tokens(s.Tokens)).FontSize(13).FontWeight(600).TextColor(p.text).FontFeatures("tnum").SingleLine().Width(60).Shrink(0)
@@ -517,7 +585,7 @@ func (a *app) recentSessions(c *ui.Context, p palette, pr *claude.Profile, sum *
 						a.toast(locales.Copied())
 					})
 					ui.Button(c.Key("resume"), locales.Resume()).Tooltip(locales.ResumeNote()).OnClick(func() {
-						if err := a.resumeSession(pr.Name, s); err != nil {
+						if err := a.resumeSession(s.Profile, s); err != nil {
 							a.toast(errText(err))
 						}
 					})
@@ -577,7 +645,7 @@ func (a *app) profileUsage(c *ui.Context, p palette) {
 			if r.Hovered() {
 				r.Background(p.hover())
 			}
-			if name == a.current {
+			if name == a.current && !a.overviewAll {
 				r.Background(p.tint(p.selected).Alpha(0.5))
 			}
 			r.OnClick(func() { a.show(pageOverview, name) }).Children(func() {
@@ -606,6 +674,26 @@ func (a *app) profileUsage(c *ui.Context, p palette) {
 			ui.Text(c, locales.MoreProfiles(n)).FontSize(12).TextColor(p.faint).Padding(2, 0, 0)
 		}
 	})
+}
+
+// reclaimable is what Cleanup would free of the folders Overview shows,
+// known once each has been looked at.
+func (a *app) reclaimable(pr *claude.Profile) (int64, bool) {
+	if !a.overviewAll {
+		if pl := a.plans[pr.Name]; pl != nil {
+			return pl.Reclaim(), true
+		}
+		return 0, false
+	}
+	var n int64
+	for _, q := range a.profiles {
+		pl := a.plans[q.Name]
+		if pl == nil {
+			return 0, false
+		}
+		n += pl.Reclaim()
+	}
+	return n, true
 }
 
 // prevLabel says what the change of a number is measured against.

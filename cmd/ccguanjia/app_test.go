@@ -131,6 +131,59 @@ func TestOverview(t *testing.T) {
 	}
 }
 
+// Overview sums every profile at first, and the menu narrows it to one.
+func TestOverviewAll(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 2200)
+	if !a.overviewAll || a.summaryKey != "*/1" {
+		t.Fatalf("all %v, summary %s", a.overviewAll, a.summaryKey)
+	}
+	for _, want := range []string{locales.AllProfiles(), locales.CardAccounts(), "ada@example.com", "ada@studio.example", locales.ProfilesCount(3) + " · " + locales.SignedInOf(2, 3)} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	var total int64
+	for _, pd := range a.byProfile {
+		total += pd.Tokens.Total()
+	}
+	if a.summary.Tokens.Total() != total || total == 0 {
+		t.Errorf("tokens %d of the profiles' %d", a.summary.Tokens.Total(), total)
+	}
+	profiles := map[string]bool{}
+	for _, s := range a.summary.Recent {
+		profiles[s.Profile] = true
+	}
+	if !profiles["default"] || !profiles["work"] || len(profiles) != 2 {
+		t.Errorf("recent sessions of %v", profiles)
+	}
+	st := a.overviewStorage()
+	if st == nil || st.Total != a.storage["default"].Total+a.storage["work"].Total+a.storage["side"].Total {
+		t.Errorf("storage %+v", st)
+	}
+
+	a.show(pageOverview, "work")
+	tt.Frame()
+	if a.overviewAll || a.summary.Tokens.Total() != a.byProfile["work"].Tokens.Total() || !tt.HasText("work · ada@studio.example") {
+		t.Errorf("work: all %v, tokens %d", a.overviewAll, a.summary.Tokens.Total())
+	}
+	for _, s := range a.summary.Recent {
+		if s.Profile != "work" {
+			t.Fatalf("session of %s", s.Profile)
+		}
+	}
+	if err := tt.Click(locales.Resume()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(a.lastTerminal, " cli run work --resume ") {
+		t.Errorf("resume: %s", a.lastTerminal)
+	}
+	a.showAll()
+	if !a.overviewAll || a.summaryKey != "*/1" {
+		t.Errorf("all again: %v %s", a.overviewAll, a.summaryKey)
+	}
+}
+
 func TestProfilePage(t *testing.T) {
 	a := fixture(t)
 	tt := newTester(a.view, 1320, 940)
@@ -457,10 +510,22 @@ func TestPalette(t *testing.T) {
 func TestShortcuts(t *testing.T) {
 	a := fixture(t)
 	tt := newTester(a.view, 1320, 940)
+	// Overview steps from all the profiles to each one, and back.
+	tt.Key(ui.Cmd|ui.Alt, ui.KeyDown)
+	tt.Frame()
+	if a.overviewAll || a.current != "default" {
+		t.Errorf("next profile: %s, all %v", a.current, a.overviewAll)
+	}
 	tt.Key(ui.Cmd|ui.Alt, ui.KeyDown)
 	tt.Frame()
 	if a.current != "side" {
 		t.Errorf("next profile: %s", a.current)
+	}
+	tt.Key(ui.Cmd|ui.Alt, ui.KeyUp)
+	tt.Key(ui.Cmd|ui.Alt, ui.KeyUp)
+	tt.Frame()
+	if !a.overviewAll {
+		t.Errorf("back to all: %s", a.current)
 	}
 	tt.Key(ui.Cmd, ui.KeyN)
 	tt.Frame()

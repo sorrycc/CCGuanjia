@@ -56,6 +56,9 @@ type app struct {
 
 	page    string
 	current string // the profile the pages show
+	// overviewAll is whether Overview sums every profile, rather than
+	// showing the current one.
+	overviewAll bool
 	// profiles are those found, launchers the ones of ~/.zshrc.
 	profiles       []*claude.Profile
 	launchers      []shell.Launcher
@@ -152,21 +155,22 @@ type cleanRun struct {
 
 func newApp(env *claude.Env, cfgDir, exe string) *app {
 	a := &app{
-		env:        env,
-		cfgDir:     cfgDir,
-		cfg:        config.Load(cfgDir),
-		exe:        exe,
-		post:       func(f func()) { f() },
-		now:        time.Now,
-		page:       pageOverview,
-		rangeIdx:   1,
-		scanner:    usage.NewScanner(),
-		storage:    map[string]*usage.Storage{},
-		storageAt:  map[string]time.Time{},
-		measuring:  map[string]bool{},
-		active:     map[string]time.Time{},
-		plans:      map[string]*clean.Plan{},
-		chosenVers: map[string]bool{},
+		env:         env,
+		cfgDir:      cfgDir,
+		cfg:         config.Load(cfgDir),
+		exe:         exe,
+		post:        func(f func()) { f() },
+		now:         time.Now,
+		page:        pageOverview,
+		overviewAll: true,
+		rangeIdx:    1,
+		scanner:     usage.NewScanner(),
+		storage:     map[string]*usage.Storage{},
+		storageAt:   map[string]time.Time{},
+		measuring:   map[string]bool{},
+		active:      map[string]time.Time{},
+		plans:       map[string]*clean.Plan{},
+		chosenVers:  map[string]bool{},
 	}
 	a.resetNew()
 	return a
@@ -309,7 +313,7 @@ func (a *app) loadProfiles() {
 			}
 			a.loadActivity()
 			a.loadUsage()
-			a.loadStorage(a.current)
+			a.loadOverviewStorage()
 			if a.page == pageCleanup {
 				a.loadPlan(a.current)
 			}
@@ -344,8 +348,9 @@ func (a *app) saveConfig() {
 	a.writeShell()
 }
 
-// loadUsage reads the transcripts of the current profile for the range,
-// then the totals of the others.
+// loadUsage reads the transcripts of every profile for the range: the
+// summary Overview shows, of them all or of the current one, and the
+// totals of each.
 func (a *app) loadUsage() {
 	p := a.cur()
 	if p == nil {
@@ -353,37 +358,50 @@ func (a *app) loadUsage() {
 	}
 	r := ranges[a.rangeIdx]
 	idx := a.rangeIdx
-	key := fmt.Sprintf("%s/%d", p.Name, idx)
+	key := a.usageKey()
 	a.usageGen++
 	a.usageWant = key
 	gen := a.usageGen
 	now := a.now()
-	dir := p.Dir
-	a.do(func() func() {
-		sum := a.scanner.Scan(dir, now.Add(-r.d), now, r.buckets)
-		return func() {
-			if gen == a.usageGen {
-				a.summary, a.summaryKey = &sum, key
-				a.usageDone = gen
-			}
-		}
-	})
+	all, name := a.overviewAll, p.Name
 	dirs := map[string]string{}
 	for _, q := range a.profiles {
 		dirs[q.Name] = q.Dir
 	}
 	a.do(func() func() {
+		sums := make(map[string]usage.Summary, len(dirs))
 		totals := make(map[string]usage.Period, len(dirs))
-		for name, dir := range dirs {
-			sum := a.scanner.Scan(dir, now.Add(-r.d), now, 1)
-			totals[name] = usage.Period{Tokens: sum.Tokens, Replies: sum.Replies, Sessions: sum.Sessions}
+		for n, dir := range dirs {
+			sum := a.scanner.Scan(dir, now.Add(-r.d), now, r.buckets)
+			sums[n] = sum
+			totals[n] = usage.Period{Tokens: sum.Tokens, Replies: sum.Replies, Sessions: sum.Sessions}
+		}
+		var sum usage.Summary
+		if all {
+			sum = usage.Merge(sums)
+		} else {
+			sum = usage.Merge(map[string]usage.Summary{name: sums[name]})
 		}
 		return func() {
 			if gen == a.usageGen {
+				a.summary, a.summaryKey = &sum, key
+				a.usageDone = gen
 				a.byProfile, a.byProfileIdx = totals, idx
 			}
 		}
 	})
+}
+
+// usageKey names the summary Overview wants: of every profile or of the
+// current one, over the range.
+func (a *app) usageKey() string {
+	name := "*"
+	if !a.overviewAll {
+		if p := a.cur(); p != nil {
+			name = p.Name
+		}
+	}
+	return fmt.Sprintf("%s/%d", name, a.rangeIdx)
 }
 
 // storageFresh is how long a folder's measure is shown before the window
@@ -408,6 +426,39 @@ func (a *app) loadStorage(name string) {
 			delete(a.measuring, name)
 		}
 	})
+}
+
+// loadOverviewStorage measures the folders Overview shows: every one, or
+// the current profile's.
+func (a *app) loadOverviewStorage() {
+	if !a.overviewAll {
+		a.loadStorage(a.current)
+		return
+	}
+	for _, p := range a.profiles {
+		a.loadStorage(p.Name)
+	}
+}
+
+// overviewStorage is what Overview shows of the folders, nil while one is
+// still being measured.
+func (a *app) overviewStorage() *usage.Storage {
+	if !a.overviewAll {
+		if p := a.cur(); p != nil {
+			return a.storage[p.Name]
+		}
+		return nil
+	}
+	sts := make([]usage.Storage, 0, len(a.profiles))
+	for _, p := range a.profiles {
+		st := a.storage[p.Name]
+		if st == nil {
+			return nil
+		}
+		sts = append(sts, *st)
+	}
+	st := usage.MergeStorage(sts)
+	return &st
 }
 
 // loadInstall finds the installs in the PATH of the login shell, and
@@ -581,12 +632,22 @@ func (a *app) startClean() {
 	})
 }
 
-// select shows a page, of a profile for those that show one.
+// show shows a page, of a profile for those that show one. Overview of a
+// profile shows that one alone.
 func (a *app) show(page, profile string) {
+	reload := false
 	if profile != "" && profile != a.current {
 		a.current = profile
+		reload = true
+	}
+	if page == pageOverview && profile != "" && a.overviewAll {
+		a.overviewAll = false
+		reload = true
+	}
+	if reload {
 		a.loadUsage()
-		a.loadStorage(profile)
+		a.loadOverviewStorage()
+		a.loadStorage(a.current)
 	}
 	a.page = page
 	switch page {
@@ -600,6 +661,16 @@ func (a *app) show(page, profile string) {
 		}
 	}
 	a.actionErr = ""
+}
+
+// showAll shows Overview of every profile.
+func (a *app) showAll() {
+	a.page = pageOverview
+	if !a.overviewAll {
+		a.overviewAll = true
+		a.loadUsage()
+		a.loadOverviewStorage()
+	}
 }
 
 func (a *app) setRange(i int) {

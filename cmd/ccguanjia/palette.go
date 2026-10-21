@@ -70,8 +70,8 @@ func (a *app) commands() []command {
 				}
 			}})
 	}
-	// The sessions of the current profile active last, to resume.
-	if pr := a.cur(); pr != nil && a.summary != nil && a.summaryKey == a.usageWant {
+	// The sessions Overview shows active last, to resume.
+	if a.summary != nil && a.summaryKey == a.usageWant {
 		for i, s := range a.summary.Recent {
 			if i == 5 {
 				break
@@ -80,9 +80,9 @@ func (a *app) commands() []command {
 			if s.Project == "" {
 				name = "—"
 			}
-			cmds = append(cmds, command{"resume-" + s.ID, iconHistory, func(p palette) ui.Color { return sessionColor(p, s.Project) },
-				locales.ResumeIn(name), ago(a.now(), s.Last) + " · " + pr.Name, func() {
-					if err := a.resumeSession(pr.Name, s); err != nil {
+			cmds = append(cmds, command{"resume-" + s.Profile + "/" + s.ID, iconHistory, func(p palette) ui.Color { return sessionColor(p, s.Project) },
+				locales.ResumeIn(name), ago(a.now(), s.Last) + " · " + s.Profile, func() {
+					if err := a.resumeSession(s.Profile, s); err != nil {
 						a.toast(errText(err))
 					}
 				}})

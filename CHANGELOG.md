@@ -21,6 +21,10 @@ needs a `## <version>` section here, or its build fails.
 - Overview: tokens, sessions and models from the transcripts over 24 hours,
   7 days or 30 days, what each folder takes by type and by project, and how
   Claude Code is installed.
+- Overview shows every profile together by default: each account with its
+  plan and sign-in, tokens, sessions and storage summed, and recent sessions
+  of all profiles, each resuming in its own. The profile menu narrows it to
+  one.
 - Install: the native installer, npm, Homebrew or Bun, with update and
   reinstall through each one's official command, and removal of the native
   installer's old versions that are neither current nor running.

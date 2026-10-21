@@ -1,6 +1,7 @@
 {
   "@@locale": "en",
   "afterCleanup": "After cleanup",
+  "allProfiles": "All profiles",
   "alsoSignOut": "Also sign out of this profile",
   "alsoStartedBy": "~/.zshrc also starts it with {names}.",
   "@alsoStartedBy": {
@@ -35,6 +36,7 @@
   "cached": "Cached",
   "cancel": "Cancel",
   "cardAccount": "Account",
+  "cardAccounts": "Accounts",
   "cardActivity": "Activity by Hour",
   "cardBackup": "Backup",
   "cardGeneral": "General",
@@ -336,6 +338,14 @@
   "principle4": "Backs up and verifies before it deletes anything.",
   "profile": "Profile",
   "profileName": "Profile name",
+  "profilesCount": "{count, plural, one {# profile} other {# profiles}}",
+  "@profilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "projects": "Projects",
   "projectsCount": "{count, plural, one {# project} other {# projects}}",
   "@projectsCount": {

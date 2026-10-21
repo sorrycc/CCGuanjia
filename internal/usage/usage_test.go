@@ -117,3 +117,46 @@ func TestStorage(t *testing.T) {
 		t.Errorf("by project %+v", st.ByProject)
 	}
 }
+
+func TestMerge(t *testing.T) {
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	a, b := t.TempDir(), t.TempDir()
+	for dir, lines := range map[string][]string{
+		a: {reply(now.Add(-time.Hour), "m1", "claude-opus", "/x", 10, 5), reply(now.Add(-30*time.Hour), "m2", "claude-opus", "/x", 1, 1)},
+		b: {reply(now.Add(-2*time.Hour), "m3", "claude-haiku", "/x", 100, 50), reply(now.Add(-3*time.Hour), "m4", "claude-haiku", "/y", 1, 1)},
+	} {
+		p := filepath.Join(dir, "projects", "-x", "s.jsonl")
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, []byte(strings.Join(lines, "\n")+"\n"), 0o600)
+	}
+	s := NewScanner()
+	sum := Merge(map[string]Summary{
+		"a": s.Scan(a, now.Add(-24*time.Hour), now, 24),
+		"b": s.Scan(b, now.Add(-24*time.Hour), now, 24),
+	})
+	if sum.Replies != 3 || sum.Sessions != 3 || sum.Tokens.Input != 111 || sum.Prev.Replies != 1 || sum.Prev.Tokens.Input != 1 {
+		t.Errorf("summary %+v", sum)
+	}
+	if len(sum.Buckets) != 24 || sum.Buckets[23] != 18 || sum.Buckets[22] != 153 || sum.Counts[21] != 1 {
+		t.Errorf("buckets %v counts %v", sum.Buckets, sum.Counts)
+	}
+	if len(sum.Models) != 2 || sum.Models[0].Name != "claude-haiku" || len(sum.Projects) != 2 || sum.Projects[0].Name != "/x" || sum.Projects[0].Tokens != 171 {
+		t.Errorf("models %+v projects %+v", sum.Models, sum.Projects)
+	}
+	if len(sum.Recent) != 3 || sum.Recent[0].Profile != "a" || sum.Recent[1].Profile != "b" || sum.Recent[2].Project != "/y" {
+		t.Errorf("recent %+v", sum.Recent)
+	}
+}
+
+func TestMergeStorage(t *testing.T) {
+	st := MergeStorage([]Storage{
+		{Total: 30, ByType: []Entry{{Name: "projects", Bytes: 20}, {Name: "history.jsonl", Bytes: 10}}, ByProject: []Entry{{Name: "-x", Bytes: 20}}},
+		{Total: 25, ByType: []Entry{{Name: "projects", Bytes: 25}}, ByProject: []Entry{{Name: "-y", Bytes: 5}, {Name: "-x", Bytes: 20, Path: "/x"}}},
+	})
+	if st.Total != 55 || len(st.ByType) != 2 || st.ByType[0].Bytes != 45 {
+		t.Errorf("by type %+v", st)
+	}
+	if len(st.ByProject) != 2 || st.ByProject[0].Name != "-x" || st.ByProject[0].Bytes != 40 || st.ByProject[0].Path != "/x" {
+		t.Errorf("by project %+v", st.ByProject)
+	}
+}

@@ -1,6 +1,7 @@
 {
   "@@locale": "zh-Hans",
   "afterCleanup": "清理后",
+  "allProfiles": "全部配置",
   "alsoSignOut": "同时退出此配置的登录",
   "alsoStartedBy": "~/.zshrc 里的 {names} 也会启动它。",
   "andSignIn": "{size}，以及登录信息",
@@ -14,6 +15,7 @@
   "cached": "缓存",
   "cancel": "取消",
   "cardAccount": "账号",
+  "cardAccounts": "账号",
   "cardActivity": "按小时统计活跃度",
   "cardBackup": "备份",
   "cardGeneral": "通用",
@@ -179,6 +181,7 @@
   "principle4": "删除任何内容之前都先备份并校验。",
   "profile": "配置",
   "profileName": "配置名称",
+  "profilesCount": "{count} 个配置",
   "projects": "项目",
   "projectsCount": "{count} 个项目",
   "range24h": "24 小时",
