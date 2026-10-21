@@ -746,6 +746,16 @@ func (msgs Messages) CopyServersNote() string {
 	return Catalog.Format(msgs.locale, "copyServersNote", nil)
 }
 
+// CopyValue says "Copy {field}"
+// in the language the app shows.
+func CopyValue(field string) string { return In(i18n.Locale()).CopyValue(field) }
+
+// CopyValue says "Copy {field}"
+// in the language of msgs.
+func (msgs Messages) CopyValue(field string) string {
+	return Catalog.Format(msgs.locale, "copyValue", map[string]any{"field": field})
+}
+
 // Create says "Create"
 // in the language the app shows.
 func Create() string { return In(i18n.Locale()).Create() }
@@ -846,6 +856,16 @@ func (msgs Messages) CsChanges(count int) string {
 	return Catalog.Format(msgs.locale, "csChanges", map[string]any{"count": count})
 }
 
+// CsCleanupDays says "Keep transcripts for (days)"
+// in the language the app shows.
+func CsCleanupDays() string { return In(i18n.Locale()).CsCleanupDays() }
+
+// CsCleanupDays says "Keep transcripts for (days)"
+// in the language of msgs.
+func (msgs Messages) CsCleanupDays() string {
+	return Catalog.Format(msgs.locale, "csCleanupDays", nil)
+}
+
 // CsCopyNote says "The keys chosen take {name}'s values here, and those {name} lacks are removed. Review them before saving."
 // in the language the app shows.
 func CsCopyNote(name string) string { return In(i18n.Locale()).CsCopyNote(name) }
@@ -916,6 +936,16 @@ func (msgs Messages) CsDisableHooksNote() string {
 	return Catalog.Format(msgs.locale, "csDisableHooksNote", nil)
 }
 
+// CsEditVar says "Edit {name}"
+// in the language the app shows.
+func CsEditVar(name string) string { return In(i18n.Locale()).CsEditVar(name) }
+
+// CsEditVar says "Edit {name}"
+// in the language of msgs.
+func (msgs Messages) CsEditVar(name string) string {
+	return Catalog.Format(msgs.locale, "csEditVar", map[string]any{"name": name})
+}
+
 // CsEffortNote says "How hard the model thinks, where it supports it."
 // in the language the app shows.
 func CsEffortNote() string { return In(i18n.Locale()).CsEffortNote() }
@@ -956,6 +986,16 @@ func (msgs Messages) CsForm() string {
 	return Catalog.Format(msgs.locale, "csForm", nil)
 }
 
+// CsHideValue says "Hide the value of {name}"
+// in the language the app shows.
+func CsHideValue(name string) string { return In(i18n.Locale()).CsHideValue(name) }
+
+// CsHideValue says "Hide the value of {name}"
+// in the language of msgs.
+func (msgs Messages) CsHideValue(name string) string {
+	return Catalog.Format(msgs.locale, "csHideValue", map[string]any{"name": name})
+}
+
 // CsHooksNote says "Change hooks and the status line in the JSON."
 // in the language the app shows.
 func CsHooksNote() string { return In(i18n.Locale()).CsHooksNote() }
@@ -964,6 +1004,16 @@ func CsHooksNote() string { return In(i18n.Locale()).CsHooksNote() }
 // in the language of msgs.
 func (msgs Messages) CsHooksNote() string {
 	return Catalog.Format(msgs.locale, "csHooksNote", nil)
+}
+
+// CsInList says "Already in the list"
+// in the language the app shows.
+func CsInList() string { return In(i18n.Locale()).CsInList() }
+
+// CsInList says "Already in the list"
+// in the language of msgs.
+func (msgs Messages) CsInList() string {
+	return Catalog.Format(msgs.locale, "csInList", nil)
 }
 
 // CsInvalidJSON says "Not valid JSON: {error}"
@@ -1136,6 +1186,16 @@ func (msgs Messages) CsSaved() string {
 	return Catalog.Format(msgs.locale, "csSaved", nil)
 }
 
+// CsSharedShort says "Shared with {names}"
+// in the language the app shows.
+func CsSharedShort(names string) string { return In(i18n.Locale()).CsSharedShort(names) }
+
+// CsSharedShort says "Shared with {names}"
+// in the language of msgs.
+func (msgs Messages) CsSharedShort(names string) string {
+	return Catalog.Format(msgs.locale, "csSharedShort", map[string]any{"names": names})
+}
+
 // CsSharedWith says "This file is shared with {names}: a change here changes them too."
 // in the language the app shows.
 func CsSharedWith(names string) string { return In(i18n.Locale()).CsSharedWith(names) }
@@ -1144,6 +1204,16 @@ func CsSharedWith(names string) string { return In(i18n.Locale()).CsSharedWith(n
 // in the language of msgs.
 func (msgs Messages) CsSharedWith(names string) string {
 	return Catalog.Format(msgs.locale, "csSharedWith", map[string]any{"names": names})
+}
+
+// CsShowValue says "Show the value of {name}"
+// in the language the app shows.
+func CsShowValue(name string) string { return In(i18n.Locale()).CsShowValue(name) }
+
+// CsShowValue says "Show the value of {name}"
+// in the language of msgs.
+func (msgs Messages) CsShowValue(name string) string {
+	return Catalog.Format(msgs.locale, "csShowValue", map[string]any{"name": name})
 }
 
 // CsUnchecked says "Kept as they are, unchecked: {keys}"
@@ -1354,6 +1424,16 @@ func Duplicate() string { return In(i18n.Locale()).Duplicate() }
 // in the language of msgs.
 func (msgs Messages) Duplicate() string {
 	return Catalog.Format(msgs.locale, "duplicate", nil)
+}
+
+// EditSettingsOf says "Edit settings.json of {name}"
+// in the language the app shows.
+func EditSettingsOf(name string) string { return In(i18n.Locale()).EditSettingsOf(name) }
+
+// EditSettingsOf says "Edit settings.json of {name}"
+// in the language of msgs.
+func (msgs Messages) EditSettingsOf(name string) string {
+	return Catalog.Format(msgs.locale, "editSettingsOf", map[string]any{"name": name})
 }
 
 // Effort says "Effort"

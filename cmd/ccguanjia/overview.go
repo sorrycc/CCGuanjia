@@ -42,7 +42,13 @@ func (a *app) overview(c *ui.Context, p palette) {
 		}
 	}
 
-	ui.Grid(c).Columns(3).Gap(20).Children(func() {
+	// Three columns, or two in a narrow window, where three would cut the
+	// titles of the cards short.
+	cols := 3
+	if a.contentWidth(c) < 900 {
+		cols = 2
+	}
+	ui.Grid(c).Columns(cols).Gap(20).Children(func() {
 		// Accounts.
 		if a.overviewAll {
 			card(c, p, iconUser, p.blue, locales.CardAccounts(), locales.SignedInOf(signed, len(a.profiles)), nil, func() {
@@ -268,7 +274,7 @@ func (a *app) overview(c *ui.Context, p palette) {
 				return
 			}
 			heatmap(c, p, p.blue, sum)
-		}).ColumnSpan(2)
+		}).ColumnSpan(min(2, cols))
 
 		// Tokens by project.
 		card(c, p, iconFolder, p.purple, locales.TokensByProject(), "", nil, func() {
@@ -302,7 +308,7 @@ func (a *app) overview(c *ui.Context, p palette) {
 				return
 			}
 			a.recentSessions(c, p, sum)
-		}).ColumnSpan(3)
+		}).ColumnSpan(cols)
 	})
 }
 
@@ -579,11 +585,7 @@ func (a *app) recentSessions(c *ui.Context, p palette, sum *usage.Summary) {
 							mygo.Shell.ShowItemInFolder(s.Project)
 						}
 					})
-					copyBtn := iconButton(c.Key("copy"), p, iconCopy, locales.CopyID())
-					copyBtn.OnClick(func() {
-						c.WriteClipboard(s.ID)
-						a.toast(locales.Copied())
-					})
+					a.copyIconButton(c, p, "copy-"+s.ID, locales.CopyID(), s.ID)
 					ui.Button(c.Key("resume"), locales.Resume()).Tooltip(locales.ResumeNote()).OnClick(func() {
 						if err := a.resumeSession(s.Profile, s); err != nil {
 							a.toast(errText(err))

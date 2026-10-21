@@ -40,14 +40,17 @@ func (a *app) cleanupPage(c *ui.Context, p palette) {
 			ui.Checkbox(c.Key("force"), &o.Force, locales.RunAnyway())
 		})
 	}
-	ui.Grid(c).ColumnTracks(ui.Fr(1.15), ui.Fr(1)).Gap(20).AlignItems(ui.Start).Children(func() {
+	ui.Grid(c).ColumnTracks(a.tracks(c, ui.Fr(1.15), ui.Fr(1))...).Gap(20).AlignItems(ui.Start).Children(func() {
+		// What goes, where it is backed up and the button doing it read
+		// down the left; the edits of settings.json and signing out, the
+		// right.
 		ui.Column(c).Gap(20).MinWidth(0).Children(func() {
 			a.itemsCard(c, p, pl)
+			a.backupCard(c, p, pl)
 		})
 		ui.Column(c).Gap(20).MinWidth(0).Children(func() {
 			a.settingsEditsCard(c, p, pl)
 			a.signOutCard(c, p, pl)
-			a.backupCard(c, p, pl)
 		})
 	})
 }
@@ -184,10 +187,10 @@ func (a *app) settingsEditsCard(c *ui.Context, p palette, pl *clean.Plan) {
 			from = fmt.Sprint(s.CleanupDays)
 		}
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			ui.Checkbox(c.Key("days"), &o.SetCleanupDays, "cleanupPeriodDays").Grow(1).Shrink(1).MinWidth(0)
+			ui.Checkbox(c.Key("days"), &o.SetCleanupDays, locales.CsCleanupDays()).Grow(1).Shrink(1).MinWidth(0)
 			ui.Row(c).Gap(6).AlignItems(ui.Center).Shrink(0).Children(func() {
 				days := float64(o.CleanupDays)
-				if ui.NumberInput(c.Key("days-n"), &days, 1, 3650, 1).Label("cleanupPeriodDays").Width(150).Disabled(!o.SetCleanupDays).Changed() {
+				if ui.NumberInput(c.Key("days-n"), &days, 1, 3650, 1).Label(locales.CsCleanupDays()).Width(150).Disabled(!o.SetCleanupDays).Changed() {
 					o.CleanupDays = int(days)
 				}
 			})

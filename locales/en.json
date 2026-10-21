@@ -144,6 +144,14 @@
   "copyServers": "Copy Servers",
   "copyServersFrom": "Copy servers from",
   "copyServersNote": "Adds only the servers this profile doesn't have, in mcpServers of its .claude.json. The rest of the file stays as it is.",
+  "copyValue": "Copy {field}",
+  "@copyValue": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
   "create": "Create",
   "created": "Created. Run {command} in a new terminal to sign in.",
   "@created": {
@@ -175,6 +183,7 @@
       }
     }
   },
+  "csCleanupDays": "Keep transcripts for (days)",
   "csCopyNote": "The keys chosen take {name}'s values here, and those {name} lacks are removed. Review them before saving.",
   "@csCopyNote": {
     "placeholders": {
@@ -189,11 +198,28 @@
   "csDetached": "settings.json is now this profile's own",
   "csDiffers": "differs",
   "csDisableHooksNote": "Claude Code runs none of the hooks below, nor the status line.",
+  "csEditVar": "Edit {name}",
+  "@csEditVar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "csEffortNote": "How hard the model thinks, where it supports it.",
   "csEnvNote": "Variables Claude Code sets in each session. Values of names with KEY, TOKEN, SECRET or PASSWORD are hidden.",
   "csFixFirst": "Fix these in the JSON before saving.",
   "csForm": "Form",
+  "csHideValue": "Hide the value of {name}",
+  "@csHideValue": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "csHooksNote": "Change hooks and the status line in the JSON.",
+  "csInList": "Already in the list",
   "csInvalidJSON": "Not valid JSON: {error}",
   "@csInvalidJSON": {
     "placeholders": {
@@ -256,10 +282,26 @@
     }
   },
   "csSaved": "settings.json saved",
+  "csSharedShort": "Shared with {names}",
+  "@csSharedShort": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "csSharedWith": "This file is shared with {names}: a change here changes them too.",
   "@csSharedWith": {
     "placeholders": {
       "names": {
+        "type": "String"
+      }
+    }
+  },
+  "csShowValue": "Show the value of {name}",
+  "@csShowValue": {
+    "placeholders": {
+      "name": {
         "type": "String"
       }
     }
@@ -330,6 +372,14 @@
     }
   },
   "duplicate": "duplicate",
+  "editSettingsOf": "Edit settings.json of {name}",
+  "@editSettingsOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "effort": "Effort",
   "email": "Email",
   "errNoSpace": "There isn't enough free space for the archives. Nothing was deleted.",

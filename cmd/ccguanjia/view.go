@@ -1,7 +1,6 @@
 package main
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -9,7 +8,6 @@ import (
 	"ccguanjia/internal/claude"
 	"ccguanjia/internal/clean"
 	"ccguanjia/internal/install"
-	"ccguanjia/internal/settings"
 	"ccguanjia/locales"
 )
 
@@ -39,21 +37,25 @@ func (a *app) view(c *ui.Context) {
 			if a.page == pageOverview && a.overviewAll {
 				scope = "*"
 			}
-			ui.Scroll(c.Key(a.page+"/"+scope)).Grow(1).Padding(4, 24, 28).Gap(20).Children(func() {
-				switch a.page {
-				case pageOverview:
-					a.overview(c, p)
-				case pageProfile:
-					a.profilePage(c, p)
-				case pageInstall:
-					a.installPage(c, p)
-				case pageCleanup:
-					a.cleanupPage(c, p)
-				case pageSettings:
-					a.settingsPage(c, p)
-				case pageClaudeSettings:
-					a.claudeSettingsPage(c, p)
-				}
+			ui.Scroll(c.Key(a.page+"/"+scope)).Grow(1).Padding(4, 24, 28).AlignItems(ui.Center).Children(func() {
+				// The page keeps a width a reader can follow, centered in a
+				// wide window.
+				ui.Column(c).WidthPercent(100).MaxWidth(a.pageWidth()).Gap(20).Children(func() {
+					switch a.page {
+					case pageOverview:
+						a.overview(c, p)
+					case pageProfile:
+						a.profilePage(c, p)
+					case pageInstall:
+						a.installPage(c, p)
+					case pageCleanup:
+						a.cleanupPage(c, p)
+					case pageSettings:
+						a.settingsPage(c, p)
+					case pageClaudeSettings:
+						a.claudeSettingsPage(c, p)
+					}
+				})
 			})
 			a.csSaveBar(c, p)
 		})
@@ -265,6 +267,31 @@ func (a *app) navItem(c *ui.Context, p palette, key string, lead func(selected b
 	})
 }
 
+// pageWidth is the widest the content of the page gets: Overview's three
+// columns take more than the others' two.
+func (a *app) pageWidth() float32 {
+	if a.page == pageOverview {
+		return 1560
+	}
+	return 1240
+}
+
+// contentWidth is the width the page's content has in the window.
+func (a *app) contentWidth(c *ui.Context) float32 {
+	w, _ := c.Size()
+	return min(w-sidebarWidth-48, a.pageWidth())
+}
+
+// tracks are the columns of a page of two: those given while the window
+// leaves them room, and one column, the second under the first, when it
+// is narrow, so that a card's notes don't wrap a word at a time.
+func (a *app) tracks(c *ui.Context, wide ...ui.Track) []ui.Track {
+	if a.contentWidth(c) < 860 {
+		return []ui.Track{ui.Fr(1)}
+	}
+	return wide
+}
+
 // header is the page's title, and its controls at the right.
 func (a *app) header(c *ui.Context, p palette) {
 	bar := c.TitleBar()
@@ -300,46 +327,50 @@ func (a *app) header(c *ui.Context, p palette) {
 	case pageClaudeSettings:
 		title = locales.PageClaudeSettings()
 		if cur != nil {
-			sub = a.shortPath(filepath.Join(cur.Dir, settings.Name))
+			// The file's path is in the strip at the top of the page.
+			sub = a.profileTitle(cur)
 		}
 	}
-	ui.Row(c).Height(max(bar.Height, 52)+20).Padding(0, 24, 0, 28).Gap(12).AlignItems(ui.Center).DragWindow().Children(func() {
-		ui.Column(c).Gap(1).Grow(1).MinWidth(0).Children(func() {
-			ui.Text(c, title).FontSize(21).FontWeight(700).LetterSpacing(-0.3).TextColor(p.text).SingleLine().ContentTransition(ui.ContentTransition{})
-			if sub != "" {
-				ui.Text(c, sub).FontSize(12).TextColor(p.muted).SingleLine().ContentTransition(ui.ContentTransition{})
-			}
-		})
-		switch {
-		case a.page == pageOverview && len(a.profiles) > 1:
-			// All profiles comes first; no profile can take its name, as
-			// those are lowercase.
-			names := append([]string{locales.AllProfiles()}, a.profileNames()...)
-			name := a.current
-			if a.overviewAll {
-				name = names[0]
-			}
-			if ui.Select(c.Key("profile-select"), &name, names).Label(locales.Profile()).Width(170).Changed() {
-				if name == names[0] {
-					a.showAll()
-				} else {
+	ui.Row(c).Height(max(bar.Height, 52)+20).Padding(0, 24).Justify(ui.Center).AlignItems(ui.Center).DragWindow().Children(func() {
+		// The title and the controls line up with the page under them.
+		ui.Row(c).Grow(1).MaxWidth(a.pageWidth()).Padding(0, 0, 0, 4).Gap(12).AlignItems(ui.Center).Children(func() {
+			ui.Column(c).Gap(1).Grow(1).MinWidth(0).Children(func() {
+				ui.Text(c, title).FontSize(21).FontWeight(700).LetterSpacing(-0.3).TextColor(p.text).SingleLine().ContentTransition(ui.ContentTransition{})
+				if sub != "" {
+					ui.Text(c, sub).FontSize(12).TextColor(p.muted).SingleLine().ContentTransition(ui.ContentTransition{})
+				}
+			})
+			switch {
+			case a.page == pageOverview && len(a.profiles) > 1:
+				// All profiles comes first; no profile can take its name, as
+				// those are lowercase.
+				names := append([]string{locales.AllProfiles()}, a.profileNames()...)
+				name := a.current
+				if a.overviewAll {
+					name = names[0]
+				}
+				if ui.Select(c.Key("profile-select"), &name, names).Label(locales.Profile()).Width(170).Changed() {
+					if name == names[0] {
+						a.showAll()
+					} else {
+						a.show(a.page, name)
+					}
+				}
+			case (a.page == pageCleanup || a.page == pageClaudeSettings) && len(a.profiles) > 1:
+				name := a.current
+				if ui.Select(c.Key("profile-select"), &name, a.profileNames()).Label(locales.Profile()).Width(170).Changed() {
 					a.show(a.page, name)
 				}
 			}
-		case (a.page == pageCleanup || a.page == pageClaudeSettings) && len(a.profiles) > 1:
-			name := a.current
-			if ui.Select(c.Key("profile-select"), &name, a.profileNames()).Label(locales.Profile()).Width(170).Changed() {
-				a.show(a.page, name)
+			if a.page == pageOverview {
+				i := a.rangeIdx
+				if segmented(c.Key("range"), p, &i, locales.Range24h(), locales.Range7d(), locales.Range30d()) {
+					a.setRange(i)
+				}
 			}
-		}
-		if a.page == pageOverview {
-			i := a.rangeIdx
-			if segmented(c.Key("range"), p, &i, locales.Range24h(), locales.Range7d(), locales.Range30d()) {
-				a.setRange(i)
-			}
-		}
-		iconButton(c.Key("palette"), p, iconCommand, locales.CommandPalette()+"  ⌘K").OnClick(a.openPalette)
-		spinButton(c.Key("refresh"), p, iconRefresh, locales.Refresh(), a.busy()).OnClick(a.refresh)
+			iconButton(c.Key("palette"), p, iconCommand, locales.CommandPalette()+"  ⌘K").OnClick(a.openPalette)
+			spinButton(c.Key("refresh"), p, iconRefresh, locales.Refresh(), a.busy()).OnClick(a.refresh)
+		})
 	})
 }
 

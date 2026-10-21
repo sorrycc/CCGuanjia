@@ -37,7 +37,7 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
 - **Live and compared.** A profile working now has a breathing dot, tokens and sessions show how they changed from
   the period before, and Overview compares the profiles' tokens. While the window is in front, it follows Claude
   Code minute by minute, reading only the transcripts that changed.
-- **Command palette.** ⌘K goes to any page or profile, starts a profile in the terminal, resumes a recent session,
+- **Command palette.** ⌘K goes to any page or profile, starts a profile in the terminal, opens its settings.json, resumes a recent session,
   copies a launcher, or makes a new profile.
 - **Install.** Finds the native installer, npm, Homebrew or Bun, and updates, reinstalls or installs a chosen version
   through that method's official command, optionally turning auto-update off to keep it. It warns when there are several installs or `claude` is a shell function, and removes the native
@@ -45,7 +45,7 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
 - **Claude Settings.** Each profile's `settings.json` in a form: the model, effort, permission rules and mode,
   environment variables, plugins, and its hooks and status line to look at. The JSON tab edits the whole file and
   checks the types of the keys it knows, in a code editor. Changed values are marked and can be reverted one by
-  one, and ⌘S reviews them. Every save shows its diff first, stops when Claude Code changed the file
+  one, and ⌘S reviews them. Pointing at a setting shows its key, and a click on a variable edits it. Every save shows its diff first, stops when Claude Code changed the file
   since it was read, and backs it up. A file shared through a link says which profiles a change reaches, and
   **Detach** makes it the profile's own. Compare sets it against another profile's and copies the keys chosen.
 - **Cleanup.** The order of `clean-claude.ts`: copy the configuration out, archive `projects/` and `file-history/`,

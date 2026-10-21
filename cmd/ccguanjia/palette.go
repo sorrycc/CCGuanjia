@@ -10,6 +10,7 @@ import (
 	"github.com/egoist/mygo/plugins/updater"
 	"github.com/egoist/mygo/ui"
 
+	"ccguanjia/internal/settings"
 	"ccguanjia/internal/shell"
 	"ccguanjia/locales"
 )
@@ -100,6 +101,8 @@ func (a *app) commands() []command {
 					a.clipboard = launcher
 					a.toast(locales.Copied())
 				}},
+			command{"cs-" + pr.Name, iconFile, func(p palette) ui.Color { return p.blue },
+				locales.EditSettingsOf(pr.Name), a.shortPath(filepath.Join(pr.Dir, settings.Name)), func() { a.show(pageClaudeSettings, pr.Name) }},
 			command{"reveal-" + pr.Name, iconReveal, func(p palette) ui.Color { return p.blue },
 				locales.RevealProfile(pr.Name), a.shortPath(pr.Dir), func() {
 					if !a.sync {
@@ -250,7 +253,11 @@ func (a *app) palette(c *ui.Context, p palette) {
 						iconSquare(c, p, cmd.icon, cmd.color(p), 26)
 					}
 					ui.Text(c, cmd.title).FontSize(14).FontWeight(500).TextColor(p.text).SingleLine().Grow(1).Shrink(1).MinWidth(0)
-					if cmd.hint != "" {
+					// A shortcut shows on keys, as in Settings.
+					switch {
+					case strings.HasPrefix(cmd.hint, "⌘"):
+						keycap(c, p, strings.Join(strings.Split(cmd.hint, ""), " "))
+					case cmd.hint != "":
 						ui.Text(c, cmd.hint).FontSize(12).TextColor(p.muted).SingleLine().Shrink(0)
 					}
 					if sel {

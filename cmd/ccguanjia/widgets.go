@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+
+	"ccguanjia/locales"
 )
 
 // iconSquare is an icon in a rounded square of its color's tint.
@@ -381,18 +383,30 @@ func drawTile(pt *ui.Painter, p palette, color ui.Color, t tile, r ui.Rect, show
 }
 
 // bar is a row of a list of bars: a name, a value, and a bar under them,
-// which grows in the first time it shows and to its new length after.
+// which grows in the first time it shows and to its new length after. The
+// one under the pointer thickens and lights its value.
 func bar(c *ui.Context, p palette, color ui.Color, name, value string, frac float64) {
-	ui.Column(c).Gap(6).Children(func() {
+	row := ui.Column(c).Gap(6)
+	hot := row.Hovered()
+	thick, valCol := float32(6), p.muted
+	if hot {
+		thick, valCol = 8, p.text
+	}
+	h := row.AnimateTo("thick", thick, ui.Snappy)
+	row.Children(func() {
 		ui.Row(c).Gap(8).Children(func() {
 			ui.Text(c, name).FontSize(13).FontWeight(500).TextColor(p.text).SingleLine().Grow(1).Shrink(1).MinWidth(0).Tooltip(name)
-			ui.Text(c, value).FontSize(12).TextColor(p.muted).FontFeatures("tnum").SingleLine().Shrink(0).ContentTransition(numeric)
+			v := ui.Text(c, value).FontSize(12).FontFeatures("tnum").SingleLine().Shrink(0).ContentTransition(numeric)
+			v.TextColor(v.AnimateColor("col", valCol, ui.Animation{Duration: 160 * time.Millisecond}))
 		})
-		track := ui.Box(c).Height(6).Radius(3).Background(p.well)
-		f := track.AnimateTo("f", float32(math.Min(1, math.Max(0, frac))), ui.Smooth) * easeOutCubic(grow(track))
-		track.Draw(func(pt *ui.Painter, r ui.Rect) {
-			w := max(r.H, r.W*f)
-			pt.FillGradient(ui.Rect{X: r.X, Y: r.Y, W: w, H: r.H}, ui.LinearGradient{From: color.Alpha(0.7), To: color, Angle: 90}, r.H/2)
+		// The track keeps its height, so that the rows below stay put.
+		ui.Box(c).Height(8).Children(func() {
+			track := ui.Box(c).Height(h).Radius(h/2).Background(p.well).Margin((8-h)/2, 0, 0)
+			f := track.AnimateTo("f", float32(math.Min(1, math.Max(0, frac))), ui.Smooth) * easeOutCubic(grow(track))
+			track.Draw(func(pt *ui.Painter, r ui.Rect) {
+				w := max(r.H, r.W*f)
+				pt.FillGradient(ui.Rect{X: r.X, Y: r.Y, W: w, H: r.H}, ui.LinearGradient{From: color.Alpha(0.7), To: color, Angle: 90}, r.H/2)
+			})
 		})
 	})
 }
@@ -463,6 +477,59 @@ func spinButton(c *ui.Context, p palette, icon *ui.SVG, label string, spin bool)
 	return b
 }
 
+// copiedFor is how long a copy button shows its check.
+const copiedFor = 1500 * time.Millisecond
+
+// copy writes text to the clipboard from the button of key, which then
+// shows that it did.
+func (a *app) copy(c *ui.Context, key, text string) {
+	c.WriteClipboard(text)
+	a.copiedKey, a.copiedAt = key, c.Now()
+	a.toast(locales.Copied())
+}
+
+// justCopied reports whether the button of key copied a moment ago, and
+// asks for the frame that turns it back.
+func (a *app) justCopied(c *ui.Context, key string) bool {
+	if a.copiedKey != key {
+		return false
+	}
+	left := copiedFor - c.Now().Sub(a.copiedAt)
+	if left <= 0 {
+		return false
+	}
+	c.After(left)
+	return true
+}
+
+// copyIconButton is an icon button copying text, whose icon turns to a
+// check for a moment after it does.
+func (a *app) copyIconButton(c *ui.Context, p palette, key, label, text string) ui.Element {
+	done := a.justCopied(c, key)
+	b := ui.Box(c.Key(key)).Size(34, 34).Radius(10).Background(p.card).BorderWidth(1).BorderColor(p.border).
+		Center().Cursor(ui.CursorPointer).Label(label).Tooltip(label).Transition(quick)
+	pose := ui.Pose{}
+	switch {
+	case done:
+		b.Background(p.tint(p.green)).BorderColor(p.green.Alpha(0.3))
+	case b.Hovered():
+		b.Background(p.cardHover.Mix(p.text, 0.06))
+	}
+	if b.Pressed() {
+		pose.Scale = 0.92
+	}
+	b.AnimatePose(pose, ui.Snappy)
+	b.OnClick(func() { a.copy(c, key, text) })
+	b.Children(func() {
+		icon, col := iconCopy, p.muted
+		if done {
+			icon, col = iconCheck, p.green
+		}
+		ui.Icon(c, icon).Size(16, 16).TextColor(col).ContentTransition(ui.ContentTransition{})
+	})
+	return b
+}
+
 // row is a line of a card's list: a title, a note under it and what goes
 // at its end.
 func row(c *ui.Context, p palette, title, note string, end func()) {
@@ -513,6 +580,13 @@ func banner(c *ui.Context, p palette, icon *ui.SVG, color ui.Color, text string,
 		if end != nil {
 			ui.Row(c).Gap(8).Shrink(0).Children(end)
 		}
+	})
+}
+
+// keycap is the keys of a shortcut, as on a key.
+func keycap(c *ui.Context, p palette, keys string) {
+	ui.Box(c).Padding(3, 8).Radius(6).Background(p.well).BorderWidth(1).BorderColor(p.border).Shrink(0).Children(func() {
+		ui.Text(c, keys).FontSize(12).FontWeight(600).TextColor(p.muted).SingleLine()
 	})
 }
 

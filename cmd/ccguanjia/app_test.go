@@ -712,7 +712,7 @@ func TestClaudeSettings(t *testing.T) {
 	if others := a.csDrafts["work"].others; len(others) != 0 {
 		t.Errorf("compare with %v", others)
 	}
-	for _, want := range []string{locales.CsSharedWith("default"), locales.CardPermissions(), "Bash(ls)", "old", locales.Detach(), locales.CsChanges(0)} {
+	for _, want := range []string{locales.CsSharedShort("default"), locales.CardPermissions(), "Bash(ls)", "old", locales.Detach(), locales.CsChanges(0)} {
 		if !tt.HasText(want) {
 			t.Errorf("no %q in %q", want, tt.Texts())
 		}
@@ -933,5 +933,126 @@ func TestClaudeSettingsJSONEditor(t *testing.T) {
 	tt.Frame()
 	if d.rawErr == "" || !tt.HasText(locales.CsInvalidShort()) {
 		t.Errorf("no error for JSON that does not parse: %q", tt.Texts())
+	}
+}
+
+// A variable whose name marks a secret hides its value until shown, a
+// click on a variable puts it in the fields to change, and an item already
+// in a list is not added again.
+func TestClaudeSettingsEnvAndLists(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 2600)
+	a.show(pageClaudeSettings, "default")
+	tt.Frame()
+	if err := tt.Click(locales.VarName()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("API_KEY")
+	if err := tt.Click(locales.VarValue()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("s3cret")
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	d := a.csDrafts["default"]
+	if tt.HasText("s3cret") || !tt.HasText("••••••") {
+		t.Fatalf("the value shows: %q", tt.Texts())
+	}
+	if err := tt.Click(locales.CsShowValue("API_KEY")); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText("s3cret") {
+		t.Fatalf("the value is hidden: %q", tt.Texts())
+	}
+	if err := tt.Click(locales.CsEditVar("API_KEY")); err != nil {
+		t.Fatal(err)
+	}
+	if d.envKey != "API_KEY" || d.envVal != "s3cret" || !tt.HasText(locales.Update()) {
+		t.Fatalf("fields %q=%q, texts %q", d.envKey, d.envVal, tt.Texts())
+	}
+	if err := tt.Click(locales.VarValue()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Key(ui.Cmd, ui.KeyA)
+	tt.Type("other")
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	var v string
+	d.draft.GetIn([]string{"env", "API_KEY"}, &v)
+	if v != "other" {
+		t.Errorf("API_KEY = %q", v)
+	}
+	before := len(d.changes())
+	d.add["permissions.allow"] = "Bash(ls)"
+	tt.Frame()
+	if err := tt.Click(locales.AddTo(locales.RuleAllow())); err != nil {
+		t.Fatal(err)
+	}
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if len(d.changes()) != before || d.add["permissions.allow"] != "Bash(ls)" {
+		t.Errorf("a duplicate was added: %v, field %q", d.changes(), d.add["permissions.allow"])
+	}
+}
+
+// Copy says it copied for a moment, then turns back.
+func TestCopyShowsCopied(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1600)
+	a.show(pageProfile, "work")
+	tt.Frame()
+	if err := tt.Click(locales.Copy()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !tt.HasText("✓ " + locales.Copied()) {
+		t.Fatalf("no check in %q", tt.Texts())
+	}
+	tt.Advance(2 * time.Second)
+	tt.Frame()
+	if tt.HasText("✓ " + locales.Copied()) {
+		t.Errorf("still copied: %q", tt.Texts())
+	}
+}
+
+// The palette opens a profile's settings.json on Claude Settings.
+func TestPaletteEditsSettings(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1600)
+	tt.Frame()
+	tt.Key(ui.Cmd, ui.KeyK)
+	tt.Frame()
+	tt.Type(locales.EditSettingsOf("work"))
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if a.page != pageClaudeSettings || a.current != "work" {
+		t.Errorf("page %s %s", a.page, a.current)
+	}
+}
+
+// A field of the account shows a button copying its value under the
+// pointer, and only there.
+func TestProfileFieldCopy(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1600)
+	a.show(pageProfile, "work")
+	tt.Frame()
+	label := locales.CopyValue(locales.Email())
+	if tt.HasText(label) {
+		t.Fatal("the copy button shows without the pointer")
+	}
+	r, ok := tt.Find("ada@studio.example")
+	if !ok {
+		t.Fatalf("no email in %q", tt.Texts())
+	}
+	tt.Move(r.X+r.W/2, r.Y+r.H/2)
+	tt.Frame()
+	tt.Advance(500 * time.Millisecond)
+	if err := tt.Click(label); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if got := tt.Clipboard(); got != "ada@studio.example" {
+		t.Errorf("clipboard %q", got)
 	}
 }

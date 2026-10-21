@@ -30,7 +30,7 @@ func (a *app) installPage(c *ui.Context, p palette) {
 	if len(a.inst.Kinds()) > 1 {
 		banner(c, p, iconAlert, p.orange, locales.SeveralInstalls(len(a.inst.Installs)), nil)
 	}
-	ui.Grid(c).ColumnTracks(ui.Fr(1), ui.Fr(1)).Gap(20).AlignItems(ui.Start).Children(func() {
+	ui.Grid(c).ColumnTracks(a.tracks(c, ui.Fr(1), ui.Fr(1))...).Gap(20).AlignItems(ui.Start).Children(func() {
 		ui.Column(c).Gap(20).MinWidth(0).Children(func() {
 			card(c, p, iconPackage, p.red, "Claude Code", "", nil, func() {
 				ui.Box(c).Children(func() {
@@ -221,6 +221,9 @@ func (a *app) versionList(c *ui.Context, p palette, in *install.Install, want st
 	})
 }
 
+// versionStateWidth is the width of the end of a native version's row.
+const versionStateWidth = 104
+
 func (a *app) versionsCard(c *ui.Context, p palette) {
 	vs := a.inst.Versions
 	// The native versions can be switched to when native is what runs.
@@ -240,17 +243,21 @@ func (a *app) versionsCard(c *ui.Context, p palette) {
 					if canUse && !v.Current {
 						ui.Button(c.Key("use"), locales.Use()).OnClick(func() { a.openVersionDialog(v.Name) })
 					}
-					switch {
-					case v.Current:
-						pill(c, p, nil, p.green, locales.Current())
-					case v.InUse:
-						pill(c, p, nil, p.blue, locales.InUse())
-					default:
-						on := a.chosenVers[v.Name]
-						if ui.Checkbox(c.Key("ck"), &on, locales.Remove()).Changed() {
-							a.chosenVers[v.Name] = on
+					// What a version is, or the box removing it, in a column
+					// of its own width, so that the Use buttons line up.
+					ui.Row(c).Width(versionStateWidth).Justify(ui.End).AlignItems(ui.Center).Shrink(0).Children(func() {
+						switch {
+						case v.Current:
+							pill(c, p, nil, p.green, locales.Current())
+						case v.InUse:
+							pill(c, p, nil, p.blue, locales.InUse())
+						default:
+							on := a.chosenVers[v.Name]
+							if ui.Checkbox(c.Key("ck"), &on, locales.Remove()).Changed() {
+								a.chosenVers[v.Name] = on
+							}
 						}
-					}
+					})
 				})
 				if !v.Current && !v.InUse && a.chosenVers[v.Name] {
 					chosen++

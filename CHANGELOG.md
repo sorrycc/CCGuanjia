@@ -18,6 +18,33 @@ needs a `## <version>` section here, or its build fails.
   JSON tab is a code editor with highlighting, the lines changed marked in
   its gutter and the error underlined where it is. The review shows the
   changes key by key or as a diff of the file's lines.
+- Claude Settings is laid out anew: the file, what it links to and who
+  shares it sit in a strip at the top, with Detach and buttons showing the
+  file and its backups in Finder, and General comes first. Pointing at a
+  setting shows its key in `settings.json`. A click on a variable puts it
+  in the fields to change its value, the values of secret ones show on
+  request, and an item already in a list is not added twice. The JSON
+  editor takes the window's height, and the page works out its lists,
+  variables, plugins, hooks and comparison once per edit.
+- The review of Claude Settings shows each change as its key, with the
+  value removed struck through and the value it becomes in color.
+- Install lines up the Use buttons of the native versions, and Cleanup
+  names the transcript setting in words, as Claude Settings does.
+- Copying a launcher or a session's ID turns its button to a check for a
+  moment.
+- The command palette opens a profile's `settings.json` on Claude
+  Settings, and shows its shortcuts on keys.
+- Overview's bars of tokens by model and by project thicken under the
+  pointer, and Settings shows the line the shell file adds to `~/.zshrc`
+  sliding in as it turns on, with a button copying it.
+- A profile's account fields show a button copying the value under the
+  pointer.
+- Cleanup puts the backup and its button under what it removes, so the
+  page fits the window and Back Up and Clean shows without scrolling.
+- In a wide window the pages keep a width that reads easily, centered
+  under a header that lines up with them, rather than stretching across.
+- In a narrow window the pages of two columns stack them in one, and
+  Overview shows two columns, so notes and titles are not cut short.
 
 ## 0.1.0
 

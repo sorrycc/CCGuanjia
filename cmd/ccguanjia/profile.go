@@ -24,7 +24,7 @@ func (a *app) profilePage(c *ui.Context, p palette) {
 			ui.Button(c, locales.Dismiss()).OnClick(func() { a.actionErr = "" })
 		})
 	}
-	ui.Grid(c).ColumnTracks(ui.Fr(1), ui.Fr(1)).Gap(20).AlignItems(ui.Start).Children(func() {
+	ui.Grid(c).ColumnTracks(a.tracks(c, ui.Fr(1), ui.Fr(1))...).Gap(20).AlignItems(ui.Start).Children(func() {
 		ui.Column(c).Gap(20).MinWidth(0).Children(func() {
 			a.accountCard(c, p, pr)
 			a.launchCard(c, p, pr)
@@ -55,10 +55,32 @@ func (a *app) accountCard(c *ui.Context, p palette, pr *claude.Profile) {
 			}
 		})
 		ui.Column(c).Children(func() {
+			// A field shows a button copying its value while the pointer is
+			// on it, and a check for a moment after.
 			field := func(label, value string) {
-				ui.Row(c).Gap(12).Padding(7, 0).BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
+				r := ui.Row(c.Key("field-"+label)).Gap(12).Padding(7, 0).AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.border)
+				key := "copy-field-" + label
+				done := a.justCopied(c, key)
+				show := value != "—" && (r.Hovered() || done)
+				r.Children(func() {
 					ui.Text(c, label).FontSize(13).TextColor(p.muted).Width(110).Shrink(0)
 					ui.Text(c, value).FontSize(13).TextColor(p.text).Selectable().Grow(1).MinWidth(0)
+					// The button keeps its room, so that the value doesn't move.
+					ui.Box(c).Size(22, 22).Shrink(0).Children(func() {
+						if !show {
+							return
+						}
+						icon := iconCopy
+						if done {
+							icon = iconCheck
+						}
+						b := smallIconButton(c.Key("copy"), p, icon, locales.CopyValue(label)).
+							Transition(ui.ElementTransition{Animation: &ui.Snappy, Enter: &ui.Motion{Scale: 0.6}, Exit: &ui.Motion{Scale: 0.6}})
+						if done {
+							b.Background(p.tint(p.green))
+						}
+						b.OnClick(func() { a.copy(c, key, value) })
+					})
 				})
 			}
 			email, name, org := "—", "—", "—"
@@ -93,10 +115,12 @@ func (a *app) launchCard(c *ui.Context, p palette, pr *claude.Profile) {
 			ui.Box(c).Grow(1).MinWidth(0).Padding(9, 12).Radius(10).Background(p.well).Children(func() {
 				ui.Text(c, cmd).Font("monospace").FontSize(14).TextColor(p.text).Selectable().SingleLine()
 			})
-			ui.Button(c.Key("copy-cmd"), locales.Copy()).OnClick(func() {
-				c.WriteClipboard(cmd)
-				a.toast(locales.Copied())
-			})
+			// Copy says Copied for a moment after it copies.
+			label := locales.Copy()
+			if a.justCopied(c, "copy-cmd") {
+				label = "✓ " + locales.Copied()
+			}
+			ui.Button(c.Key("copy-cmd"), label).Label(locales.Copy()).MinWidth(92).OnClick(func() { a.copy(c, "copy-cmd", cmd) })
 			ui.PrimaryButton(c.Key("open-terminal"), locales.OpenInTerminal()).OnClick(func() {
 				if err := a.openTerminal(pr.Name); err != nil {
 					a.actionErr = errText(err)

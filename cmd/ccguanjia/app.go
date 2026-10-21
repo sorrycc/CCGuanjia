@@ -154,6 +154,10 @@ type app struct {
 
 	// toasts waits for the next frame, which shows it.
 	toasts []string
+	// copiedKey is the button that copied last, at copiedAt, which shows
+	// a check for a moment.
+	copiedKey string
+	copiedAt  time.Time
 	// lastTerminal is the command a test would have opened a terminal
 	// with.
 	lastTerminal string

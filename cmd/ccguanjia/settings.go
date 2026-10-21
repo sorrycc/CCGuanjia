@@ -24,18 +24,32 @@ var languages = []struct{ tag, name string }{
 // settingsPage is the shell file, the ccgj command, the default profile,
 // the terminal, the language, and what the app is.
 func (a *app) settingsPage(c *ui.Context, p palette) {
-	ui.Grid(c).ColumnTracks(ui.Fr(1), ui.Fr(1)).Gap(20).AlignItems(ui.Start).Children(func() {
+	ui.Grid(c).ColumnTracks(a.tracks(c, ui.Fr(1), ui.Fr(1))...).Gap(20).AlignItems(ui.Start).Children(func() {
 		ui.Column(c).Gap(20).MinWidth(0).Children(func() {
 			card(c, p, iconTerminal, p.green, locales.CardShell(), "", nil, func() {
 				on := a.shellInstalled
 				if switchRow(c.Key("shell"), p, locales.ShellFile(), locales.ShellFileNote(), &on, false) {
 					a.setShell(on)
 				}
-				mono(c, p, a.shortPath(filepath.Join(a.cfgDir, shell.FileName)))
-				if a.shellInstalled {
-					mono(c, p, shell.SourceLine(a.env.Home, filepath.Join(a.cfgDir, shell.FileName)))
-					ui.Text(c, locales.ShellReload()).FontSize(12).TextColor(p.faint)
-				}
+				// The file, and the line ~/.zshrc sources it with, which slides
+				// in as the switch turns on and can be copied.
+				file := filepath.Join(a.cfgDir, shell.FileName)
+				ui.Column(c).Gap(6).Padding(10, 12).Radius(10).Background(p.well).BorderWidth(1).BorderColor(p.border).Children(func() {
+					ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+						ui.Icon(c, iconFile).Size(13, 13).TextColor(p.faint).Shrink(0)
+						mono(c, p, a.shortPath(file)).SingleLine().Grow(1).Shrink(1).MinWidth(0)
+					})
+					if a.shellInstalled {
+						line := shell.SourceLine(a.env.Home, file)
+						ui.Column(c.Key("source")).Gap(6).Transition(listRow).Children(func() {
+							ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+								mono(c, p, line).TextColor(p.text).Grow(1).Shrink(1).MinWidth(0)
+								a.copyIconButton(c, p, "copy-source", locales.Copy(), line)
+							})
+							ui.Text(c, locales.ShellReload()).FontSize(12).TextColor(p.faint)
+						})
+					}
+				})
 				on = a.cliInstalled
 				if switchRow(c.Key("cli"), p, locales.CommandLine(), locales.CommandLineNote(a.shortPath(binDir(a.env.Home))), &on, false) {
 					a.setCLI(on)
@@ -116,9 +130,7 @@ func (a *app) settingsPage(c *ui.Context, p palette) {
 					} {
 						ui.Row(c).Gap(12).AlignItems(ui.Center).Padding(8, 0).Children(func() {
 							ui.Text(c, sc.name).FontSize(13).TextColor(p.text).Grow(1).Shrink(1).MinWidth(0).SingleLine()
-							ui.Box(c).Padding(3, 8).Radius(6).Background(p.well).BorderWidth(1).BorderColor(p.border).Shrink(0).Children(func() {
-								ui.Text(c, sc.keys).FontSize(12).FontWeight(600).TextColor(p.muted)
-							})
+							keycap(c, p, sc.keys)
 						})
 					}
 				})

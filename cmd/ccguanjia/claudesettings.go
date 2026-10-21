@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -63,6 +64,8 @@ type csDraft struct {
 	envKey, envVal string
 	compareWith    string
 	chosen         map[string]bool
+	// reveal are the variables whose hidden values show.
+	reveal map[string]bool
 }
 
 // csMemo is what a frame reads of a draft: its changes, the problems of
@@ -73,7 +76,24 @@ type csMemo struct {
 	problems  []settings.Problem
 	unchecked []string
 	modified  map[string]bool
+	// lists are the items of the lists at paths, in the draft and in the
+	// file.
+	lists map[string]csListItems
+	// env and plugins are the draft's variables and plugins, in its order.
+	env       []csVar
+	plugins   []string
+	pluginsOn int
+	hooks     []settings.Hook
+	status    string
+	// compare are the keys that differ from the file of compareWith.
+	compareWith string
+	compare     []settings.KeyDiff
 }
+
+type csListItems struct{ now, was []string }
+
+// csVar is a variable of the draft's env, its value as text.
+type csVar struct{ name, value string }
 
 // base is the object the draft's changes are of.
 func (d *csDraft) base() *jsonedit.Object {
@@ -94,9 +114,58 @@ func (d *csDraft) memoNow() *csMemo {
 	if d.draft != nil {
 		m.changes = settings.Changes(d.base(), d.draft)
 		m.problems, m.unchecked = settings.Check(d.draft)
+		if env, _ := jsonedit.Parse(d.draft.Raw("env")); env != nil {
+			for _, k := range env.Keys() {
+				var v string
+				if _, err := env.Get(k, &v); err != nil {
+					v = settings.Short(env.Raw(k))
+				}
+				m.env = append(m.env, csVar{k, v})
+			}
+		}
+		if plugins, _ := jsonedit.Parse(d.draft.Raw("enabledPlugins")); plugins != nil {
+			m.plugins = plugins.Keys()
+			for _, k := range m.plugins {
+				var on bool
+				if plugins.Get(k, &on); on {
+					m.pluginsOn++
+				}
+			}
+		}
+		m.hooks = settings.Hooks(d.draft)
+		d.draft.GetIn([]string{"statusLine", "command"}, &m.status)
 	}
 	d.memo = m
 	return m
+}
+
+// list is the items of the list at path, in the draft and in the file.
+func (d *csDraft) list(path []string) csListItems {
+	m := d.memoNow()
+	k := strings.Join(path, "\x00")
+	l, ok := m.lists[k]
+	if !ok {
+		d.draft.GetIn(path, &l.now)
+		d.base().GetIn(path, &l.was)
+		if m.lists == nil {
+			m.lists = map[string]csListItems{}
+		}
+		m.lists[k] = l
+	}
+	return l
+}
+
+// compare is the keys whose values differ from those of other's file.
+func (d *csDraft) compare(other string) []settings.KeyDiff {
+	m := d.memoNow()
+	if m.compare == nil || m.compareWith != other {
+		m.compare = settings.CompareKeys(d.draft, d.others[other].Object)
+		if m.compare == nil {
+			m.compare = []settings.KeyDiff{}
+		}
+		m.compareWith = other
+	}
+	return m.compare
 }
 
 func (d *csDraft) changes() []settings.Change { return d.memoNow().changes }
@@ -246,7 +315,7 @@ func (a *app) loadClaudeSettings(name string, keep bool) {
 		return
 	}
 	f := settings.Load(p, a.profiles)
-	d := &csDraft{file: f, others: map[string]*settings.File{}, add: map[string]string{}, chosen: map[string]bool{}}
+	d := &csDraft{file: f, others: map[string]*settings.File{}, add: map[string]string{}, chosen: map[string]bool{}, reveal: map[string]bool{}}
 	if old := a.csDrafts[name]; old != nil {
 		d.json, d.compareWith = old.json, old.compareWith
 	}
@@ -365,14 +434,14 @@ func (a *app) claudeSettingsPage(c *ui.Context, p palette) {
 		return
 	}
 	a.csToolbar(c, p, d)
+	a.csFileStrip(c, p, pr, d)
 	// The form and the JSON come in from a little below as they swap.
 	swap := ui.ElementTransition{Animation: &glide, Enter: &ui.Motion{Y: 10}}
 	if d.json {
 		ui.Column(c.Key("cs-json")).Gap(20).Transition(swap).Children(func() { a.csJSONCard(c, p, d) })
 	} else {
-		ui.Grid(c.Key("cs-form")).ColumnTracks(ui.Fr(1), ui.Fr(1)).Gap(20).AlignItems(ui.Start).Transition(swap).Children(func() {
+		ui.Grid(c.Key("cs-form")).ColumnTracks(a.tracks(c, ui.Fr(1), ui.Fr(1))...).Gap(20).AlignItems(ui.Start).Transition(swap).Children(func() {
 			ui.Column(c).Gap(20).MinWidth(0).Children(func() {
-				a.csFileCard(c, p, pr, d)
 				a.csGeneralCard(c, p, d)
 				a.csPermissionsCard(c, p, d)
 			})
@@ -418,16 +487,6 @@ func (a *app) csToolbar(c *ui.Context, p palette, d *csDraft) {
 			}
 		}
 		ui.Box(c).Grow(1)
-		// What the file is: its own, linked, or not there yet.
-		f := d.file
-		switch {
-		case !f.Exists:
-			pill(c, p, iconFile, p.gray, locales.CsNotCreated())
-		case f.Link:
-			pill(c, p, iconLink, p.purple, locales.CsLinked())
-		default:
-			pill(c, p, iconFile, p.blue, locales.CsOwnFile())
-		}
 		col, icon := p.green, iconCheck
 		if n > 0 || d.rawErr != "" {
 			col, icon = p.orange, iconDot
@@ -468,10 +527,13 @@ func (a *app) csSaveBar(c *ui.Context, p palette) {
 				}
 				ui.Text(c, msg).FontSize(13).FontWeight(500).TextColor(p.text).SingleLine().ContentTransition(numeric)
 				ui.Box(c).Width(6)
+				if !invalid {
+					keycap(c, p, "⌘ S")
+				}
 				ui.Button(c.Key("cs-discard"), locales.Discard()).OnClick(func() {
 					a.loadClaudeSettings(d.file.Profile, false)
 				})
-				ui.PrimaryButton(c.Key("cs-review"), locales.ReviewChanges()).Tooltip("⌘S").Disabled(n == 0 || invalid).
+				ui.PrimaryButton(c.Key("cs-review"), locales.ReviewChanges()).Disabled(n == 0 || invalid).
 					OnClick(func() { d.review = true })
 			})
 		})
@@ -484,33 +546,58 @@ func (a *app) csReview() {
 	}
 }
 
-func (a *app) csFileCard(c *ui.Context, p palette, pr *claude.Profile, d *csDraft) {
+// csFileStrip is the file the page edits, in a strip across it: where it
+// is, what it links to and who shares it, with Detach for a linked file
+// and the buttons showing it and its backups in Finder.
+func (a *app) csFileStrip(c *ui.Context, p palette, pr *claude.Profile, d *csDraft) {
 	f := d.file
-	card(c, p, iconFile, p.blue, locales.CardFile(), "", nil, func() {
-		ui.Column(c).Gap(4).Children(func() {
-			mono(c, p, a.shortPath(f.Path)).FontSize(13).TextColor(p.text)
-			switch {
-			case f.Link:
-				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-					ui.Icon(c, iconLink).Size(12, 12).TextColor(p.faint)
-					ui.Text(c, locales.CsLinksTo(a.shortPath(f.Real))).FontSize(12).TextColor(p.muted)
+	backups := filepath.Join(a.cfgDir, "settings-backups")
+	col, icon, kind := p.blue, iconFile, locales.CsOwnFile()
+	switch {
+	case !f.Exists:
+		col, kind = p.gray, locales.CsNotCreated()
+	case f.Link:
+		col, icon, kind = p.purple, iconLink, locales.CsLinked()
+	}
+	panel(c, p).Padding(12, 14, 12, 14).Children(func() {
+		ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+			iconSquare(c, p, icon, col, 34)
+			ui.Column(c).Gap(4).Grow(1).Shrink(1).MinWidth(0).Children(func() {
+				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+					mono(c, p, a.shortPath(f.Path)).FontSize(13).FontWeight(500).TextColor(p.text).SingleLine().Shrink(1).MinWidth(0)
+					pill(c, p, nil, col, kind)
 				})
-			case !f.Exists:
-				ui.Text(c, locales.CsNoFile()).FontSize(12).TextColor(p.muted)
-			}
-		})
-		if len(f.SharedWith) > 0 {
-			banner(c, p, iconUsers, p.purple, locales.CsSharedWith(strings.Join(f.SharedWith, ", ")), nil)
-		}
-		ui.Column(c).Dividers(1, p.border).Gap(1).Children(func() {
-			if f.Link && !pr.Default {
-				row(c, p, locales.CsDetachTitle(), locales.CsDetachNote(), func() {
-					ui.Button(c.Key("cs-detach"), locales.Detach()).OnClick(a.detachSettings)
+				ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+					switch {
+					case f.Link:
+						ui.Row(c).Gap(5).AlignItems(ui.Center).Shrink(1).MinWidth(0).Children(func() {
+							ui.Icon(c, iconLink).Size(11, 11).TextColor(p.faint).Shrink(0)
+							ui.Text(c, locales.CsLinksTo(a.shortPath(f.Real))).FontSize(12).TextColor(p.muted).SingleLine()
+						})
+					case !f.Exists:
+						ui.Text(c, locales.CsNoFile()).FontSize(12).TextColor(p.muted).SingleLine().Shrink(1).MinWidth(0)
+					default:
+						ui.Text(c, locales.CsBackupsNote(a.shortPath(backups))).FontSize(12).TextColor(p.muted).SingleLine().Shrink(1).MinWidth(0)
+					}
+					if len(f.SharedWith) > 0 {
+						ui.Row(c).Gap(5).AlignItems(ui.Center).Shrink(0).Tooltip(locales.CsSharedWith(strings.Join(f.SharedWith, ", "))).Children(func() {
+							ui.Icon(c, iconUsers).Size(12, 12).TextColor(p.purple)
+							ui.Text(c, locales.CsSharedShort(strings.Join(f.SharedWith, ", "))).FontSize(12).FontWeight(500).TextColor(p.purple).SingleLine()
+						})
+					}
 				})
-			}
-			row(c, p, locales.CsBackups(), locales.CsBackupsNote(a.shortPath(filepath.Join(a.cfgDir, "settings-backups"))), func() {
-				ui.Button(c.Key("cs-reveal"), locales.ShowInFinder()).OnClick(func() {
+			})
+			ui.Row(c).Gap(8).AlignItems(ui.Center).Shrink(0).Children(func() {
+				if f.Link && !pr.Default {
+					ui.Button(c.Key("cs-detach"), locales.Detach()).Tooltip(locales.CsDetachNote()).OnClick(a.detachSettings)
+				}
+				iconButton(c.Key("cs-backups"), p, iconArchive, locales.CsBackupsNote(a.shortPath(backups))).OnClick(func() {
 					if !a.sync {
+						mygo.Shell.ShowItemInFolder(backups)
+					}
+				})
+				iconButton(c.Key("cs-reveal"), p, iconReveal, locales.ShowInFinder()).OnClick(func() {
+					if !a.sync && f.Exists {
 						mygo.Shell.ShowItemInFolder(f.Real)
 					}
 				})
@@ -535,11 +622,11 @@ func (a *app) csGeneralCard(c *ui.Context, p palette, d *csDraft) {
 			a.csSelect(c, p, d, "effortLevel", locales.Effort(), locales.CsEffortNote(), effortLevels)
 			days := 0.0
 			o.Get("cleanupPeriodDays", &days)
-			a.csRow(c, p, d, []string{"cleanupPeriodDays"}, "cleanupPeriodDays", locales.CleanupDaysNote()+" "+locales.CsZeroUnset(), nil, func() {
+			a.csRow(c, p, d, []string{"cleanupPeriodDays"}, locales.CsCleanupDays(), locales.CleanupDaysNote()+" "+locales.CsZeroUnset(), nil, func() {
 				// The number's field is of its own width: it lines up with
 				// the fields above at their left.
 				ui.Row(c).Width(csControlWidth).Children(func() {
-					if ui.NumberInput(c.Key("cs-days"), &days, 0, 3650, 1).Label("cleanupPeriodDays").Changed() {
+					if ui.NumberInput(c.Key("cs-days"), &days, 0, 3650, 1).Label(locales.CsCleanupDays()).Changed() {
 						if days > 0 {
 							d.set([]string{"cleanupPeriodDays"}, int(days))
 						} else {
@@ -556,12 +643,19 @@ func (a *app) csGeneralCard(c *ui.Context, p palette, d *csDraft) {
 
 // csRow is a row of the form for the value at path: its title, with a dot
 // after it while the value differs from the file's and a button putting
-// the file's back, a note under it, and the control at its end. A click
-// on the title calls onTitle, when set, as a switch's label does.
+// the file's back, a note under it, and the control at its end. The key
+// of the file fades in after the title while the pointer is on the row. A
+// click on the title calls onTitle, when set, as a switch's label does.
 func (a *app) csRow(c *ui.Context, p palette, d *csDraft, path []string, title, note string, onTitle func(), end func()) {
 	mod := d.modified(path)
 	key := strings.Join(path, ".")
-	ui.Row(c.Key("row-"+key)).Gap(12).AlignItems(ui.Center).Padding(11, 0).Children(func() {
+	r := ui.Row(c.Key("row-"+key)).Gap(12).AlignItems(ui.Center).Padding(11, 0)
+	hint := float32(0)
+	if r.Hovered() {
+		hint = 1
+	}
+	shown := r.Animate("hint", hint, 160*time.Millisecond)
+	r.Children(func() {
 		ui.Column(c).Gap(3).Grow(1).MinWidth(0).Children(func() {
 			ui.Row(c).Gap(7).AlignItems(ui.Center).Children(func() {
 				t := ui.Text(c, title).FontSize(14).FontWeight(500).TextColor(p.text).Shrink(1).MinWidth(0)
@@ -576,6 +670,10 @@ func (a *app) csRow(c *ui.Context, p palette, d *csDraft, path []string, title, 
 					smallIconButton(c.Key("revert"), p, iconUndo, locales.CsRevert(key)).
 						Transition(ui.ElementTransition{Animation: &ui.Snappy, Enter: &ui.Motion{Scale: 0.6}, Exit: &ui.Motion{Scale: 0.6}}).
 						OnClick(func() { d.revert(path) })
+				}
+				if shown > 0 && path[0] != "enabledPlugins" {
+					mono(c, p, key).FontSize(11).TextColor(p.faint).SingleLine().Shrink(1).MinWidth(0).
+						Opacity(shown).Translate((1-shown)*-4, 0)
 				}
 			})
 			if note != "" {
@@ -662,9 +760,8 @@ func itemKeys(items []string) []string {
 // and a field adding one. Items the file lacks show a dot.
 func (a *app) csList(c *ui.Context, p palette, d *csDraft, path []string, title, placeholder string, color ui.Color) {
 	key := strings.Join(path, ".")
-	var items, was []string
-	d.draft.GetIn(path, &items)
-	d.base().GetIn(path, &was)
+	l := d.list(path)
+	items, was := l.now, l.was
 	ui.Column(c.Key("cs-list-"+key)).Gap(8).Padding(12, 0, 2).BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Box(c).Size(8, 8).Radius(4).Background(color).Shrink(0)
@@ -698,11 +795,15 @@ func (a *app) csList(c *ui.Context, p palette, d *csDraft, path []string, title,
 			v := d.add[key]
 			submitted := ui.TextInput(c.Key("new"), &v).Placeholder(placeholder).Label(locales.AddTo(title)).Font("monospace").Grow(1).MinWidth(0).Submitted()
 			d.add[key] = v
-			add := ui.Button(c.Key("add"), locales.Add()).Disabled(strings.TrimSpace(v) == "")
-			if add.Clicked() || submitted {
-				if s := strings.TrimSpace(v); s != "" && !slices.Contains(items, s) {
-					d.setList(path, append(slices.Clone(items), s))
-				}
+			// An item already there is not added twice; the field keeps it.
+			s := strings.TrimSpace(v)
+			dup := slices.Contains(items, s)
+			add := ui.Button(c.Key("add"), locales.Add()).Disabled(s == "" || dup)
+			if dup {
+				add.Tooltip(locales.CsInList())
+			}
+			if (add.Clicked() || submitted) && s != "" && !dup {
+				d.setList(path, append(slices.Clone(items), s))
 				d.add[key] = ""
 			}
 		})
@@ -731,44 +832,76 @@ func count(n int) string {
 }
 
 func (a *app) csEnvCard(c *ui.Context, p palette, d *csDraft) {
-	env, _ := jsonedit.Parse(d.draft.Raw("env"))
-	var keys []string
-	if env != nil {
-		keys = env.Keys()
-	}
-	card(c, p, iconTerminal, p.teal, locales.CardEnv(), count(len(keys)), nil, func() {
+	vars := d.memoNow().env
+	card(c, p, iconTerminal, p.teal, locales.CardEnv(), count(len(vars)), nil, func() {
 		ui.Text(c, locales.CsEnvNote()).FontSize(12).TextColor(p.muted).LineHeight(1.4)
-		if len(keys) == 0 {
+		if len(vars) == 0 {
 			emptyNote(c, p, iconTerminal, locales.CsNoEnv())
 		}
+		exists := false
+		name := strings.TrimSpace(d.envKey)
 		ui.Column(c).Gap(4).Children(func() {
-			for _, k := range keys {
-				var val string
-				if _, err := env.Get(k, &val); err != nil {
-					val = settings.Short(env.Raw(k))
-				}
-				if secretVar(k) {
-					val = "••••••"
-				}
-				path := []string{"env", k}
-				ui.Box(c.Key("env-" + k)).Transition(listRow).Children(func() {
+			for _, v := range vars {
+				path := []string{"env", v.name}
+				secret := secretVar(v.name)
+				editing := v.name == name
+				exists = exists || editing
+				ui.Box(c.Key("env-" + v.name)).Transition(listRow).Children(func() {
 					bg := p.well
-					if d.modified(path) {
+					switch {
+					case editing:
+						bg = p.tint(p.blue).Alpha(0.7)
+					case d.modified(path):
 						bg = p.tint(p.orange).Alpha(0.6)
 					}
-					ui.Row(c).Gap(10).AlignItems(ui.Center).Padding(5, 4, 5, 10).Radius(8).Background(bg).Transition(quick).Children(func() {
-						ui.Text(c, k).Font("monospace").FontSize(12).FontWeight(600).TextColor(p.text).Shrink(0)
-						ui.Text(c, val).Font("monospace").FontSize(12).TextColor(p.muted).Selectable().Grow(1).Shrink(1).MinWidth(0).SingleLine().Tooltip(val)
-						smallIconButton(c.Key("rm"), p, iconX, locales.RemoveItem(k)).OnClick(func() { d.unset(path) })
+					r := ui.Row(c).Gap(10).AlignItems(ui.Center).Padding(5, 4, 5, 10).Radius(8).Background(bg).Transition(quick)
+					if r.Hovered() && !editing {
+						r.Background(bg.Mix(p.text, 0.04))
+					}
+					r.Children(func() {
+						// A click on a variable puts it in the fields below, to
+						// change its value.
+						ui.Row(c.Key("edit")).Gap(10).AlignItems(ui.Center).Grow(1).Shrink(1).MinWidth(0).
+							Cursor(ui.CursorPointer).Label(locales.CsEditVar(v.name)).OnClick(func() {
+							d.envKey, d.envVal = v.name, v.value
+						}).Children(func() {
+							ui.Text(c, v.name).Font("monospace").FontSize(12).FontWeight(600).TextColor(p.text).Shrink(0)
+							val := v.value
+							if secret && !d.reveal[v.name] {
+								val = "••••••"
+							}
+							ui.Text(c, val).Font("monospace").FontSize(12).TextColor(p.muted).Grow(1).Shrink(1).MinWidth(0).SingleLine().
+								Tooltip(val).ContentTransition(ui.ContentTransition{})
+						})
+						if secret {
+							icon, label := iconEye, locales.CsShowValue(v.name)
+							if d.reveal[v.name] {
+								icon, label = iconEyeOff, locales.CsHideValue(v.name)
+							}
+							smallIconButton(c.Key("eye"), p, icon, label).OnClick(func() { d.reveal[v.name] = !d.reveal[v.name] })
+						}
+						smallIconButton(c.Key("rm"), p, iconX, locales.RemoveItem(v.name)).OnClick(func() {
+							d.unset(path)
+							if editing {
+								d.envKey, d.envVal = "", ""
+							}
+						})
 					})
 				})
 			}
 		})
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.TextInput(c.Key("env-key"), &d.envKey).Placeholder("NAME").Label(locales.VarName()).Font("monospace").Width(160)
-			submitted := ui.TextInput(c.Key("env-val"), &d.envVal).Placeholder(locales.VarValue()).Label(locales.VarValue()).Font("monospace").Grow(1).MinWidth(0).Submitted()
-			name := strings.TrimSpace(d.envKey)
-			add := ui.Button(c.Key("env-add"), locales.Add()).Disabled(name == "")
+			val := ui.TextInput(c.Key("env-val"), &d.envVal).Placeholder(locales.VarValue()).Label(locales.VarValue()).Font("monospace").Grow(1).MinWidth(0)
+			if secretVar(name) && !d.reveal[name] {
+				val.Password()
+			}
+			submitted := val.Submitted()
+			label := locales.Add()
+			if exists {
+				label = locales.Update()
+			}
+			add := ui.Button(c.Key("env-add"), label).Disabled(name == "")
 			if add.Clicked() || submitted && name != "" {
 				d.set([]string{"env", name}, d.envVal)
 				d.envKey, d.envVal = "", ""
@@ -787,19 +920,12 @@ func emptyNote(c *ui.Context, p palette, icon *ui.SVG, text string) {
 }
 
 func (a *app) csPluginsCard(c *ui.Context, p palette, d *csDraft) {
-	plugins, _ := jsonedit.Parse(d.draft.Raw("enabledPlugins"))
-	if plugins == nil || len(plugins.Keys()) == 0 {
+	m := d.memoNow()
+	keys := m.plugins
+	if len(keys) == 0 {
 		return
 	}
-	keys := plugins.Keys()
-	on := 0
-	for _, k := range keys {
-		var v bool
-		if plugins.Get(k, &v); v {
-			on++
-		}
-	}
-	card(c, p, iconPackage, p.orange, locales.CardPlugins(), locales.CsPluginsOn(on, len(keys)), nil, func() {
+	card(c, p, iconPackage, p.orange, locales.CardPlugins(), locales.CsPluginsOn(m.pluginsOn, len(keys)), nil, func() {
 		ui.Column(c).Dividers(1, p.border).Gap(1).Children(func() {
 			for _, k := range keys {
 				name, market, _ := strings.Cut(k, "@")
@@ -810,9 +936,8 @@ func (a *app) csPluginsCard(c *ui.Context, p palette, d *csDraft) {
 }
 
 func (a *app) csHooksCard(c *ui.Context, p palette, d *csDraft) {
-	hooks := settings.Hooks(d.draft)
-	var status string
-	d.draft.GetIn([]string{"statusLine", "command"}, &status)
+	m := d.memoNow()
+	hooks, status := m.hooks, m.status
 	card(c, p, iconActivity, p.purple, locales.CardHooks(), count(len(hooks)), nil, func() {
 		ui.Column(c).Dividers(1, p.border).Gap(1).Children(func() {
 			a.csSwitch(c, p, d, "disableAllHooks", locales.DisableAllHooks(), locales.CsDisableHooksNote(), false)
@@ -862,7 +987,7 @@ func (a *app) csCompareCard(c *ui.Context, p palette, d *csDraft) {
 		d.compareWith = names[0]
 	}
 	other := d.others[d.compareWith]
-	diffs := settings.CompareKeys(d.draft, other.Object)
+	diffs := d.compare(d.compareWith)
 	card(c, p, iconCopy, p.teal, locales.CardCompare(), locales.CsKeysDiffer(len(diffs)), nil, func() {
 		row(c, p, locales.CompareWith(), a.shortPath(other.Real), func() {
 			ui.Select(c.Key("cs-compare"), &d.compareWith, names).Label(locales.CompareWith()).Width(160)
@@ -950,8 +1075,12 @@ func (a *app) csJSONCard(c *ui.Context, p palette, d *csDraft) {
 		d.synced, d.codeVer = d.raw, buf.Version()
 	}
 	d.code.Theme = codeTheme(c, p)
-	card(c, p, iconFile, p.blue, a.shortPath(d.file.Path), locales.Lines(buf.LineCount()), nil, func() {
-		ui.Box(c).Height(520).Radius(10).ClipX().ClipY().BorderWidth(1).BorderColor(p.border).Children(func() {
+	// The editor takes the height of the window that the rest of the page
+	// leaves it.
+	_, winH := c.Size()
+	height := min(max(winH-430, 300), 1400)
+	card(c, p, iconBraces, p.blue, settings.Name, locales.Lines(buf.LineCount()), nil, func() {
+		ui.Box(c).Height(height).Radius(10).ClipX().ClipY().BorderWidth(1).BorderColor(p.border).Children(func() {
 			editor.View(c, d.code).Fill()
 		})
 		if v := buf.Version(); v != d.codeVer {
@@ -1070,12 +1199,34 @@ func (a *app) csReviewDialog(c *ui.Context, p palette, d *csDraft) {
 				ui.Scroll(c.Key("cs-review-keys")).MaxHeight(380).Gap(3).Padding(8).Radius(12).Background(p.well).Children(func() {
 					for i, ch := range chs {
 						col := changeColor(p, ch.Op)
-						r := ui.Row(c.Key(i)).Gap(10).AlignItems(ui.Stretch).Radius(7).Background(col.Alpha(0.08))
+						// The key, then what it was and what it becomes: the old
+						// value struck through as it goes.
+						r := ui.Row(c.Key(i)).Gap(10).AlignItems(ui.Start).Padding(6, 10).Radius(7).Background(col.Alpha(0.08)).Label(ch.String())
 						enter.enter(r)
 						r.Children(func() {
-							ui.Box(c).Width(3).Radius(1.5).Background(col).Shrink(0)
-							ui.Text(c, ch.String()).Font("monospace").FontSize(12).TextColor(col).Selectable().LineHeight(1.45).
-								Padding(6, 10, 6, 0).Grow(1).Shrink(1).MinWidth(0)
+							sign := map[byte]string{'+': "+", '-': "−", '~': "~"}[ch.Op]
+							ui.Box(c).Size(18, 18).Radius(5).Background(col.Alpha(0.18)).Center().Shrink(0).Children(func() {
+								ui.Text(c, sign).Font("monospace").FontSize(12).FontWeight(700).TextColor(col)
+							})
+							ui.Column(c).Gap(2).Grow(1).Shrink(1).MinWidth(0).Children(func() {
+								ui.Text(c, strings.Join(ch.Path, ".")).Font("monospace").FontSize(12).FontWeight(600).TextColor(p.text).Selectable().LineHeight(1.45)
+								ui.Row(c).Gap(6).AlignItems(ui.Start).Wrap().Children(func() {
+									if ch.Op != '+' {
+										t := ui.Text(c, ch.Old).Font("monospace").FontSize(12).Selectable().LineHeight(1.45).Shrink(1).MinWidth(0)
+										if ch.Op == '~' {
+											t.TextColor(p.muted).Strikethrough()
+										} else {
+											t.TextColor(col).Strikethrough()
+										}
+									}
+									if ch.Op == '~' {
+										ui.Text(c, "→").FontSize(12).TextColor(p.faint).LineHeight(1.45)
+									}
+									if ch.Op != '-' {
+										ui.Text(c, ch.New).Font("monospace").FontSize(12).TextColor(col).Selectable().LineHeight(1.45).Shrink(1).MinWidth(0)
+									}
+								})
+							})
 						})
 					}
 				})
