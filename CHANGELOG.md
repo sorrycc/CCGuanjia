@@ -3,7 +3,7 @@
 The update window shows the section of the version it offers. Every release
 needs a `## <version>` section here, or its build fails.
 
-## Unreleased
+## 0.1.0
 
 - Profiles: CCGuanjia finds `~/.claude` and every `~/.claude-*` folder that
   `CLAUDE_CONFIG_DIR` uses, with each one's account, plan and sign-in, read
