@@ -25,6 +25,9 @@ const (
 	pageInstall  = "install"
 	pageCleanup  = "cleanup"
 	pageSettings = "settings"
+	// pageClaudeSettings is a profile's settings.json, apart from the
+	// app's own Settings.
+	pageClaudeSettings = "claude-settings"
 )
 
 // ranges are the windows of time Overview shows, with the number of
@@ -127,6 +130,9 @@ type app struct {
 	freeDir  string
 	freeTime time.Time
 
+	// Claude Settings: the draft of each profile's settings.json.
+	csDrafts map[string]*csDraft
+
 	// Profile page.
 	newOpen   bool
 	newName   string
@@ -181,6 +187,7 @@ func newApp(env *claude.Env, cfgDir, exe string) *app {
 		active:      map[string]time.Time{},
 		plans:       map[string]*clean.Plan{},
 		chosenVers:  map[string]bool{},
+		csDrafts:    map[string]*csDraft{},
 	}
 	a.resetNew()
 	return a
@@ -324,8 +331,11 @@ func (a *app) loadProfiles() {
 			a.loadActivity()
 			a.loadUsage()
 			a.loadOverviewStorage()
-			if a.page == pageCleanup {
+			switch a.page {
+			case pageCleanup:
 				a.loadPlan(a.current)
+			case pageClaudeSettings:
+				a.loadClaudeSettings(a.current, true)
 			}
 		}
 	})
@@ -732,6 +742,8 @@ func (a *app) show(page, profile string) {
 		if a.inst == nil {
 			a.loadInstall()
 		}
+	case pageClaudeSettings:
+		a.loadClaudeSettings(a.current, true)
 	}
 	a.actionErr = ""
 }

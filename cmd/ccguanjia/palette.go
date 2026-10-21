@@ -44,6 +44,7 @@ func (a *app) commands() []command {
 		{"overview", iconOverview, func(p palette) ui.Color { return p.gray }, locales.PageOverview(), "⌘1", func() { a.show(pageOverview, "") }},
 		{"install", iconPackage, func(p palette) ui.Color { return p.red }, locales.PageInstall(), "⌘2", func() { a.show(pageInstall, "") }},
 		{"cleanup", iconSparkles, func(p palette) ui.Color { return p.amber }, locales.PageCleanup(), "⌘3", func() { a.show(pageCleanup, "") }},
+		{"claude-settings", iconFile, func(p palette) ui.Color { return p.blue }, locales.PageClaudeSettings(), "⌘4", func() { a.show(pageClaudeSettings, "") }},
 		{"settings", iconGear, func(p palette) ui.Color { return p.gray }, locales.MenuSettings(), "⌘,", func() { a.show(pageSettings, "") }},
 	}
 	for _, pr := range a.profiles {

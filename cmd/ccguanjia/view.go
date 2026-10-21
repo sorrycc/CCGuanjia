@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -8,6 +9,7 @@ import (
 	"ccguanjia/internal/claude"
 	"ccguanjia/internal/clean"
 	"ccguanjia/internal/install"
+	"ccguanjia/internal/settings"
 	"ccguanjia/locales"
 )
 
@@ -49,6 +51,8 @@ func (a *app) view(c *ui.Context) {
 					a.cleanupPage(c, p)
 				case pageSettings:
 					a.settingsPage(c, p)
+				case pageClaudeSettings:
+					a.claudeSettingsPage(c, p)
 				}
 			})
 		})
@@ -102,7 +106,7 @@ func (a *app) stepProfile(d int) {
 	}
 	i = (i + d + len(a.profiles)) % len(a.profiles)
 	page := a.page
-	if page != pageOverview && page != pageCleanup {
+	if page != pageOverview && page != pageCleanup && page != pageClaudeSettings {
 		page = pageProfile
 	}
 	a.show(page, a.profiles[i].Name)
@@ -155,6 +159,13 @@ func (a *app) sidebar(c *ui.Context, p palette) {
 			reclaim = clean.Size(pl.Reclaim())
 		}
 		a.navItem(c, p, "nav-cleanup", navIcon(c, iconSparkles, p.amber), locales.PageCleanup(), reclaim, a.page == pageCleanup, func() { a.show(pageCleanup, "") })
+		changes := ""
+		if d := a.csDrafts[a.current]; d != nil {
+			if n := len(d.changes()); n > 0 {
+				changes = locales.CsChanges(n)
+			}
+		}
+		a.navItem(c, p, "nav-claude-settings", navIcon(c, iconFile, p.blue), locales.PageClaudeSettings(), changes, a.page == pageClaudeSettings, func() { a.show(pageClaudeSettings, "") })
 	})
 	ui.Row(c).Padding(12, 16, 16, 24).Gap(8).AlignItems(ui.Center).BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
 		ui.Column(c).Gap(2).Grow(1).MinWidth(0).Children(func() {
@@ -282,6 +293,11 @@ func (a *app) header(c *ui.Context, p palette) {
 		}
 	case pageSettings:
 		title, sub = locales.MenuSettings(), "CCGuanjia "+appVersion()
+	case pageClaudeSettings:
+		title = locales.PageClaudeSettings()
+		if cur != nil {
+			sub = a.shortPath(filepath.Join(cur.Dir, settings.Name))
+		}
 	}
 	ui.Row(c).Height(max(bar.Height, 52)+20).Padding(0, 24, 0, 28).Gap(12).AlignItems(ui.Center).DragWindow().Children(func() {
 		ui.Column(c).Gap(1).Grow(1).MinWidth(0).Children(func() {
@@ -306,7 +322,7 @@ func (a *app) header(c *ui.Context, p palette) {
 					a.show(a.page, name)
 				}
 			}
-		case a.page == pageCleanup && len(a.profiles) > 1:
+		case (a.page == pageCleanup || a.page == pageClaudeSettings) && len(a.profiles) > 1:
 			name := a.current
 			if ui.Select(c.Key("profile-select"), &name, a.profileNames()).Label(locales.Profile()).Width(170).Changed() {
 				a.show(a.page, name)

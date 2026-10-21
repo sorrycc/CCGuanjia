@@ -25,6 +25,7 @@ import (
 
 	"ccguanjia/internal/claude"
 	"ccguanjia/internal/jsonedit"
+	"ccguanjia/internal/settings"
 )
 
 // Kind is what a run does with an item.
@@ -344,14 +345,8 @@ func FreeSpace(dir string) int64 {
 }
 
 func planSettings(p *claude.Profile) SettingsPlan {
-	link := filepath.Join(p.Dir, "settings.json")
-	sp := SettingsPlan{Path: link}
-	if fi, err := os.Lstat(link); err == nil && fi.Mode()&os.ModeSymlink != 0 {
-		sp.Shared = true
-		if real, err := filepath.EvalSymlinks(link); err == nil {
-			sp.Path = real
-		}
-	}
+	_, real, link := settings.Resolve(p.Dir)
+	sp := SettingsPlan{Path: real, Shared: link}
 	data, err := os.ReadFile(sp.Path)
 	if os.IsNotExist(err) {
 		sp.Path = ""

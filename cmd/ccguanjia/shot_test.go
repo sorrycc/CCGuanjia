@@ -30,6 +30,8 @@ func TestShots(t *testing.T) {
 			{"install-version", pageInstall, "", 860},
 			{"cleanup", pageCleanup, "", 860},
 			{"settings", pageSettings, "", 860},
+			{"claude-settings", pageClaudeSettings, "work", 860},
+			{"claude-settings-review", pageClaudeSettings, "work", 860},
 			{"palette", pageOverview, "", 860},
 		} {
 			a := fixture(t)
@@ -37,6 +39,12 @@ func TestShots(t *testing.T) {
 			if page.name == "palette" {
 				a.openPalette()
 				a.paletteSel = 2
+			}
+			if page.name == "claude-settings-review" {
+				d := a.csDrafts["work"]
+				d.set([]string{"model"}, "opus")
+				d.set([]string{"permissions", "allow"}, []string{"Bash(ls)", "Read"})
+				d.review = true
 			}
 			if page.name == "install-version" {
 				a.available = func() ([]string, error) { return []string{"2.1.303", "2.1.302", "2.1.301", "2.1.289", "2.1.288"}, nil }

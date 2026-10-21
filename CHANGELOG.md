@@ -3,6 +3,16 @@
 The update window shows the section of the version it offers. Every release
 needs a `## <version>` section here, or its build fails.
 
+## Unreleased
+
+- Claude Settings (⌘4): edit each profile's `settings.json` in a form,
+  with the model, effort, permission rules and mode, environment
+  variables and plugins, or as JSON, which checks the types of the keys it
+  knows. Each save shows its diff, stops when the file changed since it
+  was read, and backs the file up first. A file shared through a link says
+  which profiles a change reaches, **Detach** makes it the profile's own,
+  and Compare copies chosen keys from another profile's file.
+
 ## 0.1.0
 
 - Profiles: CCGuanjia finds `~/.claude` and every `~/.claude-*` folder that

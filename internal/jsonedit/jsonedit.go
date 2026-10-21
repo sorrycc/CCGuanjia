@@ -108,6 +108,114 @@ func (o *Object) Delete(key string) bool {
 	return true
 }
 
+// GetIn decodes the value at path, a key of each object down from o, into
+// v, and reports whether there was one.
+func (o *Object) GetIn(path []string, v any) (bool, error) {
+	raw := o.RawIn(path)
+	if raw == nil {
+		return false, nil
+	}
+	return true, json.Unmarshal(raw, v)
+}
+
+// RawIn returns the value at path as it is written, nil when there is
+// none or a value on the way is not an object.
+func (o *Object) RawIn(path []string) json.RawMessage {
+	if len(path) == 0 {
+		return nil
+	}
+	raw := o.Raw(path[0])
+	for _, key := range path[1:] {
+		sub, err := Parse(raw)
+		if raw == nil || err != nil {
+			return nil
+		}
+		raw = sub.Raw(key)
+	}
+	return raw
+}
+
+// SetIn sets the value at path to v, making the objects on the way that
+// are not there. A value on the way that is not an object is an error.
+func (o *Object) SetIn(path []string, v any) error {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return o.SetRawIn(path, raw)
+}
+
+// SetRawIn sets the value at path to raw, which must be JSON.
+func (o *Object) SetRawIn(path []string, raw json.RawMessage) error {
+	switch len(path) {
+	case 0:
+		return errors.New("an empty path")
+	case 1:
+		return o.SetRaw(path[0], raw)
+	}
+	sub, err := o.child(path[0])
+	if err != nil {
+		return err
+	}
+	if err := sub.SetRawIn(path[1:], raw); err != nil {
+		return err
+	}
+	out, err := sub.Marshal("")
+	if err != nil {
+		return err
+	}
+	return o.SetRaw(path[0], out)
+}
+
+// DeleteIn removes the value at path, and reports whether it was there.
+// The objects on the way stay, even when they are left empty.
+func (o *Object) DeleteIn(path []string) bool {
+	switch len(path) {
+	case 0:
+		return false
+	case 1:
+		return o.Delete(path[0])
+	}
+	if raw := o.Raw(path[0]); raw == nil {
+		return false
+	}
+	sub, err := o.child(path[0])
+	if err != nil || !sub.DeleteIn(path[1:]) {
+		return false
+	}
+	out, err := sub.Marshal("")
+	if err != nil {
+		return false
+	}
+	o.SetRaw(path[0], out)
+	return true
+}
+
+// child is the object at key, a new one when there is none.
+func (o *Object) child(key string) (*Object, error) {
+	raw := o.Raw(key)
+	if raw == nil || string(raw) == "null" {
+		return &Object{values: map[string]json.RawMessage{}}, nil
+	}
+	sub, err := Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", key, err)
+	}
+	return sub, nil
+}
+
+// Clone returns a copy of o, which changes apart from it.
+func (o *Object) Clone() *Object {
+	c := &Object{keys: o.Keys(), values: make(map[string]json.RawMessage, len(o.values))}
+	for k, v := range o.values {
+		c.values[k] = append(json.RawMessage(nil), v...)
+	}
+	return c
+}
+
+// New returns an empty object.
+func New() *Object { return &Object{values: map[string]json.RawMessage{}} }
+
 // Marshal writes the object indented by indent, as json.MarshalIndent
 // does, without escaping <, > and &, as Claude Code writes its files.
 func (o *Object) Marshal(indent string) ([]byte, error) {

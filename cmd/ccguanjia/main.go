@@ -131,6 +131,7 @@ func (a *app) setMenu() {
 			{Label: locales.PageOverview(), Accelerator: "Cmd+1", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(func() { a.show(pageOverview, "") }) }},
 			{Label: locales.PageInstall(), Accelerator: "Cmd+2", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(func() { a.show(pageInstall, "") }) }},
 			{Label: locales.PageCleanup(), Accelerator: "Cmd+3", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(func() { a.show(pageCleanup, "") }) }},
+			{Label: locales.PageClaudeSettings(), Accelerator: "Cmd+4", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(func() { a.show(pageClaudeSettings, "") }) }},
 			mygo.Separator(),
 			{Label: locales.CommandPalette(), Accelerator: "Cmd+K", Click: func(*mygo.MenuItem, *mygo.Window) { a.post(a.openPalette) }},
 			{Label: locales.NewProfile(), Accelerator: "Cmd+N", Click: func(*mygo.MenuItem, *mygo.Window) {

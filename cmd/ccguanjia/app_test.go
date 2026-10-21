@@ -14,6 +14,7 @@ import (
 
 	"ccguanjia/internal/claude"
 	"ccguanjia/internal/install"
+	"ccguanjia/internal/settings"
 	"ccguanjia/internal/usage"
 	"ccguanjia/locales"
 )
@@ -45,7 +46,12 @@ var fixtureNow = time.Date(2026, 10, 19, 16, 0, 0, 0, time.Local)
 // out, with a week of transcripts.
 func fixture(t testing.TB) *app {
 	t.Helper()
-	home := t.TempDir()
+	// The temporary folder of macOS is behind a link; its real path keeps
+	// the paths of links under ~.
+	home, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	main := filepath.Join(home, ".claude")
 	write(t, filepath.Join(home, ".claude.json"), `{"machineID": "m", "userID": "u", "oauthAccount": {"accountUuid": "1", "emailAddress": "ada@example.com", "displayName": "Ada", "organizationName": "Ada's Studio", "organizationType": "claude_max", "organizationRateLimitTier": "default_claude_max_20x"}, "mcpServers": {"github": {"command": "gh"}, "files": {"command": "fs"}}}`)
 	for _, f := range []string{"skills/review/SKILL.md", "hooks/notify.sh", "commands/ship.md", "plugins/known_marketplaces.json"} {
@@ -685,5 +691,182 @@ func TestStorageFresh(t *testing.T) {
 	a.refresh()
 	if a.storage["default"].Total != real.Total {
 		t.Errorf("refresh: %d, want %d", a.storage["default"].Total, real.Total)
+	}
+}
+
+// Claude Settings edits work's settings.json, a link to ~/.claude's: a
+// rule added in the form shows in the review and is written through the
+// link, with a backup.
+func TestClaudeSettings(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1600)
+	if err := tt.Click(locales.PageClaudeSettings()); err != nil {
+		t.Fatal(err)
+	}
+	a.show(pageClaudeSettings, "work")
+	tt.Frame()
+	if a.page != pageClaudeSettings || a.current != "work" {
+		t.Fatalf("page %s %s", a.page, a.current)
+	}
+	// side has no settings.json to compare with, and default's is work's.
+	if others := a.csDrafts["work"].others; len(others) != 0 {
+		t.Errorf("compare with %v", others)
+	}
+	for _, want := range []string{locales.CsSharedWith("default"), locales.CardPermissions(), "Bash(ls)", "old", locales.Detach(), locales.CsChanges(0)} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	if err := tt.Click(locales.AddTo(locales.RuleAllow())); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("Read")
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if !tt.HasText(locales.CsChanges(1)) {
+		t.Fatalf("no change in %q", tt.Texts())
+	}
+	if err := tt.Click(locales.ReviewChanges()); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText(`+ permissions.allow: "Read"`) {
+		t.Fatalf("no diff in %q", tt.Texts())
+	}
+	if err := tt.Click(locales.Save()); err != nil {
+		t.Fatal(err)
+	}
+	main := filepath.Join(a.env.MainDir(), "settings.json")
+	data, _ := os.ReadFile(main)
+	if !strings.Contains(string(data), `"Read"`) {
+		t.Errorf("~/.claude/settings.json:\n%s", data)
+	}
+	if fi, _ := os.Lstat(filepath.Join(a.env.DirFor("work"), "settings.json")); fi.Mode()&os.ModeSymlink == 0 {
+		t.Error("the link was replaced")
+	}
+	if b, _ := filepath.Glob(filepath.Join(a.cfgDir, "settings-backups", "work-*.json")); len(b) != 1 {
+		t.Errorf("backups %v", b)
+	}
+	tt.Frame()
+	if !tt.HasText(locales.CsChanges(0)) {
+		t.Errorf("still changes after saving: %q", tt.Texts())
+	}
+}
+
+// A save over a change made since the file was read stops, and Overwrite
+// saves anyway.
+func TestClaudeSettingsConflict(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1600)
+	a.show(pageClaudeSettings, "default")
+	tt.Frame()
+	d := a.csDrafts["default"]
+	d.set([]string{"model"}, "opus")
+	main := filepath.Join(a.env.MainDir(), "settings.json")
+	write(t, main, `{"cleanupPeriodDays": 30, "theme": "dark"}`)
+	// The window coming to the front keeps the draft.
+	a.loadProfiles()
+	if a.csDrafts["default"] != d {
+		t.Fatal("the draft was dropped")
+	}
+	tt.Frame()
+	tt.Click(locales.ReviewChanges())
+	if err := tt.Click(locales.Save()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !tt.HasText(locales.CsChanged()) {
+		t.Fatalf("no conflict in %q", tt.Texts())
+	}
+	if data, _ := os.ReadFile(main); strings.Contains(string(data), "opus") {
+		t.Fatal("saved over the change")
+	}
+	if err := tt.Click(locales.Overwrite()); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(main); !strings.Contains(string(data), `"model": "opus"`) || strings.Contains(string(data), "theme") {
+		t.Errorf("overwritten:\n%s", data)
+	}
+}
+
+// Detach gives work a file of its own, which Compare sets against
+// ~/.claude's and copies keys from.
+func TestClaudeSettingsDetachAndCompare(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1800)
+	a.show(pageClaudeSettings, "work")
+	tt.Frame()
+	if err := tt.Click(locales.Detach()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	work := filepath.Join(a.env.DirFor("work"), "settings.json")
+	if fi, _ := os.Lstat(work); fi.Mode()&os.ModeSymlink != 0 {
+		t.Fatal("still a link")
+	}
+	if a.profile("work").LinkOf("settings.json").State != claude.Own {
+		t.Error("the profile's link is not its own file")
+	}
+	if tt.HasText(locales.CsSharedWith("default")) || !tt.HasText(locales.CsAlike()) {
+		t.Errorf("after detaching: %q", tt.Texts())
+	}
+	write(t, work, `{"cleanupPeriodDays": 90, "theme": "dark"}`)
+	a.loadClaudeSettings("work", false)
+	tt.Frame()
+	for _, want := range []string{locales.CardCompare(), locales.CsKeysDiffer(4), locales.CsOnlyHere(), locales.CsOnlyIn("default")} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	d := a.csDrafts["work"]
+	d.chosen["cleanupPeriodDays"], d.chosen["permissions"] = true, true
+	tt.Frame()
+	if err := tt.Click(locales.CopyChosen()); err != nil {
+		t.Fatal(err)
+	}
+	var lines []string
+	for _, ch := range d.changes() {
+		lines = append(lines, ch.String())
+	}
+	if want := []string{"~ cleanupPeriodDays: 90 → 30", `+ permissions: {"allow":["Bash(ls)","Edit(/Users/ada/.claude/**)","Bash(ls)"]}`}; !slices.Equal(lines, want) {
+		t.Errorf("changes %q", lines)
+	}
+}
+
+// The JSON editor takes the whole file, and what does not parse or is of
+// the wrong type cannot be saved.
+func TestClaudeSettingsJSON(t *testing.T) {
+	a := fixture(t)
+	tt := newTester(a.view, 1320, 1400)
+	a.show(pageClaudeSettings, "default")
+	tt.Frame()
+	if err := tt.Click("JSON"); err != nil {
+		t.Fatal(err)
+	}
+	d := a.csDrafts["default"]
+	if !d.json || !strings.Contains(d.raw, `"cleanupPeriodDays": 30`) {
+		t.Fatalf("json %v:\n%s", d.json, d.raw)
+	}
+	d.raw = `{"model": `
+	d.parseRaw()
+	tt.Frame()
+	if d.rawErr == "" || !tt.HasText("Not valid JSON") && !tt.HasText("JSON 无效") {
+		t.Errorf("invalid: %q, %q", d.rawErr, tt.Texts())
+	}
+	tt.Click(locales.CsForm())
+	if !d.json {
+		t.Error("left the JSON while it does not parse")
+	}
+	d.raw = `{"model": 5, "tui": "x"}`
+	d.parseRaw()
+	tt.Frame()
+	for _, want := range []string{locales.CsWant("model", locales.KindText()), locales.CsUnchecked("tui")} {
+		if !tt.HasText(want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	tt.Click(locales.ReviewChanges())
+	tt.Click(locales.Save())
+	if f := settings.Load(a.profile("default"), a.profiles); f.Object.Has("tui") {
+		t.Error("saved a file of the wrong types")
 	}
 }

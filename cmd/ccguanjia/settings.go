@@ -108,7 +108,7 @@ func (a *app) settingsPage(c *ui.Context, p palette) {
 					for _, sc := range []struct{ name, keys string }{
 						{locales.ShortcutPalette(), "⌘ K"},
 						{locales.NewProfile(), "⌘ N"},
-						{locales.ShortcutPages(), "⌘ 1 · 2 · 3"},
+						{locales.ShortcutPages(), "⌘ 1 · 2 · 3 · 4"},
 						{locales.ShortcutStep(), "⌥ ⌘ ↓ ↑"},
 						{locales.Refresh(), "⌘ R"},
 						{locales.MenuSettings(), "⌘ ,"},

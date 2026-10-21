@@ -42,6 +42,11 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
 - **Install.** Finds the native installer, npm, Homebrew or Bun, and updates, reinstalls or installs a chosen version
   through that method's official command, optionally turning auto-update off to keep it. It warns when there are several installs or `claude` is a shell function, and removes the native
   installer's old versions that are neither current nor running.
+- **Claude Settings.** Each profile's `settings.json` in a form: the model, effort, permission rules and mode,
+  environment variables, plugins, and its hooks and status line to look at. The JSON tab edits the whole file and
+  checks the types of the keys it knows. Every save shows its diff first, stops when Claude Code changed the file
+  since it was read, and backs it up. A file shared through a link says which profiles a change reaches, and
+  **Detach** makes it the profile's own. Compare sets it against another profile's and copies the keys chosen.
 - **Cleanup.** The order of `clean-claude.ts`: copy the configuration out, archive `projects/` and `file-history/`,
   verify the archives, and only then edit `settings.json` and delete. Each item and each settings edit is a check box
   with its diff. Signing out is optional, comes last, and needs the profile's name typed.
@@ -62,6 +67,11 @@ It is written in Go and draws its own window with <a href="https://github.com/eg
       <a href="docs/screenshots/install-dark.png"><img alt="The Install page" src="docs/screenshots/install-dark.png"></a></td>
     <td><b>Command palette</b> (⌘K): pages, profiles, sessions to resume and actions<br>
       <a href="docs/screenshots/palette-dark.png"><img alt="The command palette" src="docs/screenshots/palette-dark.png"></a></td>
+  </tr>
+  <tr>
+    <td><b>Claude Settings</b>: a profile's settings.json, with a diff before each save<br>
+      <a href="docs/screenshots/claude-settings-dark.png"><img alt="The Claude Settings page" src="docs/screenshots/claude-settings-dark.png"></a></td>
+    <td></td>
   </tr>
 </table>
 

@@ -44,5 +44,6 @@ var (
 	iconTrendUp   = lucide(`<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>`)
 	iconTrendDown = lucide(`<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>`)
 	iconDown      = lucide(`<path d="m6 9 6 6 6-6"/>`)
+	iconX         = lucide(`<path d="M18 6 6 18"/><path d="m6 6 12 12"/>`)
 	iconCommand   = lucide(`<path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>`)
 )
