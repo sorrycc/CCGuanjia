@@ -242,7 +242,7 @@ func (a *app) removeCard(c *ui.Context, p palette, pr *claude.Profile) {
 // newProfileDialog makes a profile: its name, the items it links to
 // ~/.claude, and whether its launcher skips permissions.
 func (a *app) newProfileDialog(c *ui.Context, p palette) {
-	ui.Modal(c, &a.newOpen, func() {
+	sheet(c, p, &a.newOpen, func() {
 		ui.Column(c).Width(440).Gap(14).Children(func() {
 			ui.Text(c, locales.NewProfile()).FontSize(17).FontWeight(700)
 			ui.Text(c, locales.NewProfileNote()).FontSize(13).TextColor(p.muted).LineHeight(1.4)

@@ -141,7 +141,7 @@ func canChooseVersion(in *install.Install) bool {
 // npm's newest, with the command it runs, and whether to keep it from
 // auto-update.
 func (a *app) versionDialog(c *ui.Context, p palette, in *install.Install) {
-	ui.Modal(c, &a.verOpen, func() {
+	sheet(c, p, &a.verOpen, func() {
 		ui.Column(c).Width(460).Gap(14).Children(func() {
 			ui.Text(c, locales.InstallVersion()).FontSize(17).FontWeight(700)
 			ui.Text(c, locales.InstallVersionNote()).FontSize(13).TextColor(p.muted).LineHeight(1.4)

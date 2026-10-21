@@ -16,8 +16,8 @@ const sidebarWidth = 260
 // view is the window: the sidebar of pages and profiles at the left, and
 // the page under its header.
 func (a *app) view(c *ui.Context) {
-	t := c.Theme()
-	p := paletteOf(t)
+	c.SetTheme(themed(c.Theme(), c.Preferences().HighContrast))
+	p := paletteOf(c.Theme())
 	for _, s := range a.toasts {
 		c.Toast(s)
 	}
@@ -32,12 +32,18 @@ func (a *app) view(c *ui.Context) {
 		}
 		side.Children(func() { a.sidebar(c, p) })
 		ui.Column(c).Grow(1).MinWidth(0).Background(p.content).Children(func() {
-			a.header(c, p)
 			scope := a.current
 			if a.page == pageOverview && a.overviewAll {
 				scope = "*"
 			}
-			ui.Scroll(c.Key(a.page+"/"+scope)).Grow(1).Padding(4, 24, 28).AlignItems(ui.Center).Children(func() {
+			key := a.page + "/" + scope
+			sc := a.scrolls[key]
+			if sc == nil {
+				sc = &ui.ScrollState{}
+				a.scrolls[key] = sc
+			}
+			a.header(c, p, sc.Y > 1)
+			ui.Scroll(c.Key(key)).TrackScroll(sc).Grow(1).Padding(4, 24, 28).AlignItems(ui.Center).Children(func() {
 				// The page keeps a width a reader can follow, centered in a
 				// wide window.
 				ui.Column(c).WidthPercent(100).MaxWidth(a.pageWidth()).Gap(20).Children(func() {
@@ -237,11 +243,14 @@ type navMatch struct{}
 func (a *app) navItem(c *ui.Context, p palette, key string, lead func(selected bool), label, value string, selected bool, onClick func()) {
 	r := ui.Row(c.Key(key)).Height(34).Radius(8).Cursor(ui.CursorPointer).Label(label).Transition(quick)
 	text, muted := p.text, p.muted
+	// The lead of a row under the pointer grows a little toward it.
+	leadPose := ui.Pose{}
 	switch {
 	case selected:
 		text, muted = p.selText, p.selText.Alpha(0.8)
 	case r.Hovered():
 		r.Background(p.hover())
+		leadPose.Scale = 1.08
 	}
 	pose := ui.Pose{}
 	if r.Pressed() {
@@ -256,7 +265,7 @@ func (a *app) navItem(c *ui.Context, p palette, key string, lead func(selected b
 				Transition(ui.ElementTransition{Animation: &glide, Match: navMatch{}})
 		}
 		ui.Row(c.Key("content")).Absolute().Left(0).Top(0).Right(0).Bottom(0).Padding(0, 10).Gap(10).AlignItems(ui.Center).Children(func() {
-			lead(selected)
+			ui.Box(c.Key("lead")).Shrink(0).AnimatePose(leadPose, ui.Snappy).Children(func() { lead(selected) })
 			t := ui.Text(c, label).FontSize(14).SingleLine().Grow(1).Shrink(1).MinWidth(0)
 			t.TextColor(t.AnimateColor("col", text, ui.Animation{Duration: 160 * time.Millisecond}))
 			if value != "" {
@@ -292,8 +301,9 @@ func (a *app) tracks(c *ui.Context, wide ...ui.Track) []ui.Track {
 	return wide
 }
 
-// header is the page's title, and its controls at the right.
-func (a *app) header(c *ui.Context, p palette) {
+// header is the page's title, and its controls at the right, over a
+// hairline once the page is scrolled under it.
+func (a *app) header(c *ui.Context, p palette, scrolled bool) {
 	bar := c.TitleBar()
 	title, sub := "", ""
 	cur := a.cur()
@@ -331,7 +341,14 @@ func (a *app) header(c *ui.Context, p palette) {
 			sub = a.profileTitle(cur)
 		}
 	}
-	ui.Row(c).Height(max(bar.Height, 52)+20).Padding(0, 24).Justify(ui.Center).AlignItems(ui.Center).DragWindow().Children(func() {
+	h := ui.Row(c.Key("header")).Height(max(bar.Height, 52)+20).Padding(0, 24).Justify(ui.Center).AlignItems(ui.Center).
+		BorderWidth(0, 0, 1, 0).DragWindow()
+	rule := ui.Transparent
+	if scrolled {
+		rule = p.border
+	}
+	h.BorderColor(h.AnimateColor("rule", rule, ui.Animation{Duration: 180 * time.Millisecond}))
+	h.Children(func() {
 		// The title and the controls line up with the page under them.
 		ui.Row(c).Grow(1).MaxWidth(a.pageWidth()).Padding(0, 0, 0, 4).Gap(12).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Gap(1).Grow(1).MinWidth(0).Children(func() {

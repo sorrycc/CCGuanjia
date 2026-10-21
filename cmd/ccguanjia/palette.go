@@ -192,10 +192,12 @@ func (a *app) palette(c *ui.Context, p palette) {
 		}
 	}
 	ui.DialogBase(c, &a.paletteOpen, func(backdrop, panel ui.Element) {
-		backdrop.Background(ui.RGBA(0, 0, 0, 0.28)).Justify(ui.Start).Padding(110, 0, 0)
+		dim(backdrop, 0.3)
+		backdrop.Justify(ui.Start).Padding(110, 0, 0)
 		panel.Width(580).Radius(16).Background(p.card).BorderWidth(1).BorderColor(p.border).
-			Shadow(0, 24, 60, -10, ui.RGBA(0, 0, 0, 0.4)).Clip()
-		(&stage{}).enter(panel)
+			Shadow(0, 2, 6, 0, ui.RGBA(0, 0, 0, 0.12)).Shadow(0, 30, 70, -12, ui.RGBA(0, 0, 0, 0.45)).
+			InsetShadow(0, 1, 0, 0, p.highlight).TransformOrigin(0.5, 0).Clip()
+		rise(panel)
 
 		if c.Shortcut(0, ui.KeyDown) || c.Shortcut(ui.Ctrl, ui.KeyN) {
 			a.paletteSel = (a.paletteSel + 1) % max(len(matches), 1)

@@ -69,3 +69,29 @@ func (p palette) tint(c ui.Color) ui.Color {
 
 // hover is the background of a control under the pointer.
 func (p palette) hover() ui.Color { return p.text.Alpha(0.06) }
+
+// themed is the system's theme in the window's colors, so that the
+// buttons, fields, menus and dialogs of the toolkit sit with the cards:
+// controls on the cards' face with hairline borders and the cards'
+// rounding, and dialogs and menus on a card. The accent stays the one the
+// system chose, and Increase Contrast keeps the system's borders.
+func themed(t *ui.Theme, highContrast bool) *ui.Theme {
+	th := *t
+	th.Radius = 8
+	if th.Dark {
+		th.Background = ui.Hex("#222225")
+		th.Surface, th.SurfaceHover, th.SurfacePressed = ui.Hex("#2c2c30"), ui.Hex("#35353a"), ui.Hex("#3e3e44")
+		if !highContrast {
+			th.TextMuted, th.Border = ui.Hex("#a1a1a8"), ui.RGBA(255, 255, 255, 0.1)
+		}
+		th.Scrollbar = ui.RGBA(255, 255, 255, 0.24)
+	} else {
+		th.Background = ui.Hex("#ffffff")
+		th.Surface, th.SurfaceHover, th.SurfacePressed = ui.Hex("#ffffff"), ui.Hex("#f5f5f7"), ui.Hex("#ebebef")
+		if !highContrast {
+			th.TextMuted, th.Border = ui.Hex("#6e6e73"), ui.RGBA(0, 0, 0, 0.13)
+		}
+		th.Scrollbar = ui.RGBA(0, 0, 0, 0.26)
+	}
+	return &th
+}

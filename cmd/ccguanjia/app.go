@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo/ui"
+
 	"ccguanjia/internal/claude"
 	"ccguanjia/internal/clean"
 	"ccguanjia/internal/config"
@@ -71,12 +73,16 @@ type app struct {
 
 	// Overview. usageWant is the key of the summary being read, and
 	// byProfile the totals of every profile over the range of byProfileIdx.
-	rangeIdx     int
-	scanner      *usage.Scanner
-	summary      *usage.Summary
-	summaryKey   string
-	usageWant    string
-	storage      map[string]*usage.Storage
+	rangeIdx   int
+	scanner    *usage.Scanner
+	summary    *usage.Summary
+	summaryKey string
+	usageWant  string
+	storage    map[string]*usage.Storage
+	// merged is the storage of every profile summed, as Overview shows
+	// it, kept until one of mergedOf, those it sums, is measured again.
+	merged       *usage.Storage
+	mergedOf     []*usage.Storage
 	usageGen     int
 	usageDone    int
 	byProfile    map[string]usage.Period
@@ -152,6 +158,10 @@ type app struct {
 	// writes as it closes.
 	clipboard string
 
+	// scrolls is where the content of each page is scrolled, so that the
+	// header shows a hairline once the content goes under it.
+	scrolls map[string]*ui.ScrollState
+
 	// toasts waits for the next frame, which shows it.
 	toasts []string
 	// copiedKey is the button that copied last, at copiedAt, which shows
@@ -192,6 +202,7 @@ func newApp(env *claude.Env, cfgDir, exe string) *app {
 		plans:       map[string]*clean.Plan{},
 		chosenVers:  map[string]bool{},
 		csDrafts:    map[string]*csDraft{},
+		scrolls:     map[string]*ui.ScrollState{},
 	}
 	a.resetNew()
 	return a
@@ -473,16 +484,23 @@ func (a *app) overviewStorage() *usage.Storage {
 		}
 		return nil
 	}
-	sts := make([]usage.Storage, 0, len(a.profiles))
+	of := make([]*usage.Storage, 0, len(a.profiles))
 	for _, p := range a.profiles {
 		st := a.storage[p.Name]
 		if st == nil {
 			return nil
 		}
-		sts = append(sts, *st)
+		of = append(of, st)
 	}
-	st := usage.MergeStorage(sts)
-	return &st
+	if a.merged == nil || !slices.Equal(of, a.mergedOf) {
+		sts := make([]usage.Storage, len(of))
+		for i, st := range of {
+			sts[i] = *st
+		}
+		st := usage.MergeStorage(sts)
+		a.merged, a.mergedOf = &st, of
+	}
+	return a.merged
 }
 
 // loadInstall finds the installs in the PATH of the login shell, and

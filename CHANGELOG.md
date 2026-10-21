@@ -45,6 +45,23 @@ needs a `## <version>` section here, or its build fails.
   under a header that lines up with them, rather than stretching across.
 - In a narrow window the pages of two columns stack them in one, and
   Overview shows two columns, so notes and titles are not cut short.
+- Buttons, fields, menus and dialogs take the window's own colors and
+  rounding: in the light appearance fields are white with a hairline
+  border, and dialogs sit on a card.
+- Dialogs and the command palette rise into place as the window dims
+  behind them, rather than appearing at once.
+- The header shows a hairline once a page is scrolled under it.
+- Overview's large numbers count up as their cards come in, and the bar
+  of unsaved changes in Claude Settings steps aside while its review is
+  open.
+- Activity by Hour fills its card, and an hour without replies is a faint
+  cell rather than a dark hole.
+- Recent Sessions keeps Show in Finder and Copy ID quiet until the
+  pointer is on their row, so that the list reads as its sessions.
+- The sidebar's icons grow a little under the pointer, and a card that
+  opens a page presses in as it is clicked.
+- Overview with all profiles sums their storage once per measurement
+  rather than on every frame.
 
 ## 0.1.0
 

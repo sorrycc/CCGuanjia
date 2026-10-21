@@ -506,7 +506,8 @@ func (a *app) csToolbar(c *ui.Context, p palette, d *csDraft) {
 // Discard and Review, rising into place as the first change is made.
 func (a *app) csSaveBar(c *ui.Context, p palette) {
 	d, n, dirty := a.csDirty()
-	if a.page != pageClaudeSettings || !dirty {
+	// The bar goes while the review it opens is in front.
+	if a.page != pageClaudeSettings || !dirty || d.review {
 		return
 	}
 	invalid := d.rawErr != ""
@@ -1170,7 +1171,7 @@ func (a *app) csReviewDialog(c *ui.Context, p palette, d *csDraft) {
 		return
 	}
 	chs := d.changes()
-	ui.Modal(c, &d.review, func() {
+	sheet(c, p, &d.review, func() {
 		ui.Column(c).Width(660).Gap(14).Children(func() {
 			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 				iconSquare(c, p, iconFile, p.blue, 34)

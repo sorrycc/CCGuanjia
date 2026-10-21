@@ -475,7 +475,8 @@ func heatmap(c *ui.Context, p palette, color ui.Color, sum *usage.Summary) {
 	}
 	const labelW, gap = float32(40), float32(3)
 	const rows = 7
-	box := ui.Box(c).Height(7*16 + 6*gap + 20)
+	// The cells take the height the card has beside its neighbor.
+	box := ui.Box(c).MinHeight(7*16 + 6*gap + 20).Grow(1)
 	g := easeOutCubic(grow(box))
 	px, py, over := box.PointerPosition()
 	box.Draw(func(pt *ui.Painter, r ui.Rect) {
@@ -492,21 +493,21 @@ func heatmap(c *ui.Context, p palette, color ui.Color, sum *usage.Summary) {
 				x := r.X + labelW + float32(h)*(cw+gap)
 				cell := ui.Rect{X: x, Y: y, W: cw, H: ch}
 				n := sum.Hours[d][h]
-				col := p.well
-				if !p.dark {
-					col = p.text.Alpha(0.05)
-				}
+				// An hour without replies is a faint cell of the card, not a
+				// hole in it.
+				empty := p.text.Alpha(0.05)
+				col := empty
 				if n > 0 && peak > 0 {
 					level := 0.22 + 0.78*float32(math.Sqrt(float64(n)/float64(peak)))
 					col = color.Alpha(level * stagger(g, h, 24))
 					if g < 1 && level*stagger(g, h, 24) < 0.05 {
-						col = p.well
+						col = empty
 					}
 				}
-				pt.Fill(cell, col, 3)
+				pt.Fill(cell, col, 4)
 				if over && r.X+px >= x && r.X+px < x+cw+gap && r.Y+py >= y && r.Y+py < y+ch+gap {
 					hotD, hotH = d, h
-					pt.Stroke(cell, p.text.Alpha(0.5), 3, 1)
+					pt.Stroke(cell, p.text.Alpha(0.5), 4, 1)
 				}
 			}
 		}
@@ -576,16 +577,27 @@ func (a *app) recentSessions(c *ui.Context, p palette, sum *usage.Summary) {
 				} else {
 					ui.Text(c, ago(now, s.Last)).FontSize(12).TextColor(p.muted).SingleLine().Width(90).Shrink(0)
 				}
+				// Show in Finder and Copy ID recede until the row is under the
+				// pointer, so that the list reads as its sessions; Resume
+				// stays.
 				ui.Row(c).Gap(6).Shrink(0).AlignItems(ui.Center).Children(func() {
-					reveal := iconButton(c.Key("reveal"), p, iconReveal, locales.ShowInFinder())
-					reveal.OnClick(func() {
-						if fi, err := os.Stat(s.Project); err != nil || !fi.IsDir() {
-							a.toast(locales.FolderGone())
-						} else if !a.sync {
-							mygo.Shell.ShowItemInFolder(s.Project)
-						}
+					quiet := float32(0.35)
+					if hovered || a.justCopied(c, "copy-"+s.ID) {
+						quiet = 1
+					}
+					q := ui.Row(c.Key("quiet")).Gap(6).AlignItems(ui.Center)
+					q.Opacity(q.AnimateTo("o", quiet, ui.Animation{Duration: 160 * time.Millisecond}))
+					q.Children(func() {
+						reveal := iconButton(c.Key("reveal"), p, iconReveal, locales.ShowInFinder())
+						reveal.OnClick(func() {
+							if fi, err := os.Stat(s.Project); err != nil || !fi.IsDir() {
+								a.toast(locales.FolderGone())
+							} else if !a.sync {
+								mygo.Shell.ShowItemInFolder(s.Project)
+							}
+						})
+						a.copyIconButton(c, p, "copy-"+s.ID, locales.CopyID(), s.ID)
 					})
-					a.copyIconButton(c, p, "copy-"+s.ID, locales.CopyID(), s.ID)
 					ui.Button(c.Key("resume"), locales.Resume()).Tooltip(locales.ResumeNote()).OnClick(func() {
 						if err := a.resumeSession(s.Profile, s); err != nil {
 							a.toast(errText(err))

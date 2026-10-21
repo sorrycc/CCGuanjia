@@ -62,6 +62,9 @@ func card(c *ui.Context, p palette, icon *ui.SVG, color ui.Color, title, extra s
 			box.Background(p.cardHover).Shadow(0, 14, 30, -14, p.lift)
 			pose.Y = -2
 		}
+		if box.Pressed() {
+			pose = ui.Pose{Y: -1, Scale: 0.995}
+		}
 		box.Transition(quick).AnimatePose(pose, ui.Snappy)
 	}
 	return box
@@ -71,13 +74,19 @@ func card(c *ui.Context, p palette, icon *ui.SVG, color ui.Color, title, extra s
 func bigValue(c *ui.Context, p palette, label, value, unit string) {
 	ui.Column(c).Gap(2).Children(func() {
 		ui.Text(c, label).FontSize(12).TextColor(p.muted).SingleLine().Padding(0, 150, 0, 0)
-		ui.Row(c).Gap(4).AlignItems(ui.End).Children(func() {
+		r := ui.Row(c).Gap(4).AlignItems(ui.End)
+		value, counting := countUp(r, value)
+		r.Children(func() {
 			size := float32(38)
 			if len([]rune(value)) > 5 {
 				size = 31
 			}
-			ui.Text(c, value).FontSize(size).FontWeight(700).TextColor(p.text).FontFeatures("tnum").
-				LetterSpacing(-0.5).SingleLine().Shrink(1).ContentTransition(numeric)
+			v := ui.Text(c, value).FontSize(size).FontWeight(700).TextColor(p.text).FontFeatures("tnum").
+				LetterSpacing(-0.5).SingleLine().Shrink(1)
+			// The digits roll as the number changes, once it has counted up.
+			if !counting {
+				v.ContentTransition(numeric)
+			}
 			if unit != "" {
 				ui.Text(c, unit).FontSize(17).FontWeight(500).TextColor(p.muted).Padding(0, 0, 6).SingleLine()
 			}
@@ -580,6 +589,21 @@ func banner(c *ui.Context, p palette, icon *ui.SVG, color ui.Color, text string,
 		if end != nil {
 			ui.Row(c).Gap(8).Shrink(0).Children(end)
 		}
+	})
+}
+
+// sheet is a dialog over the window, on a card, which rises into place as
+// the window dims behind it. Escape or a click outside it closes it.
+func sheet(c *ui.Context, p palette, open *bool, fn func()) {
+	ui.DialogBase(c, open, func(backdrop, panel ui.Element) {
+		dim(backdrop, 0.38)
+		w, h := c.Size()
+		panel.Padding(24).Radius(18).Background(p.card).BorderWidth(1).BorderColor(p.border).
+			MaxWidth(w-48).MaxHeight(h-48).
+			Shadow(0, 2, 6, 0, ui.RGBA(0, 0, 0, 0.12)).Shadow(0, 30, 70, -12, ui.RGBA(0, 0, 0, 0.45)).
+			InsetShadow(0, 1, 0, 0, p.highlight)
+		rise(panel)
+		fn()
 	})
 }
 
