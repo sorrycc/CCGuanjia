@@ -94,14 +94,36 @@ func bigValue(c *ui.Context, p palette, label, value, unit string) {
 	})
 }
 
-// skeleton is a block standing in for what is still being read, glowing
-// softly.
+// skeleton is a block standing in for what is still being read, a soft
+// light sweeping across it. The sweep only paints, without building the
+// view again; with less motion the block stays still.
 func skeleton(c *ui.Context, p palette, w, h float32) {
-	b := ui.Box(c).Height(h).Radius(min(h/2, 8)).Background(p.text.Alpha(0.07))
+	b := ui.Box(c).Height(h)
 	if w > 0 {
 		b.Width(w)
 	}
-	b.Opacity(0.55 + 0.45*b.Loop("pulse", 1400*time.Millisecond, ui.Bounce(ui.EaseInOut)))
+	still := c.Preferences().ReduceMotion
+	base, glow := p.text.Alpha(0.07), p.text.Alpha(0.07)
+	if !p.dark {
+		glow = ui.Hex("#ffffff").Alpha(0.75)
+	}
+	b.Draw(func(pt *ui.Painter, r ui.Rect) {
+		radius := min(r.H/2, 8)
+		pt.Fill(r, base, radius)
+		if still {
+			return
+		}
+		// One light sweeps the window from left to right, so that the
+		// blocks of a page glow as one wave rather than each on its own.
+		const period, span, band = 1800 * time.Millisecond, float32(1600), float32(160)
+		t := float32(pt.Now().UnixNano()%int64(period)) / float32(period)
+		x := -band + (span+2*band)*easeInOutSine(t)
+		pt.Clip(r, radius, func() {
+			pt.FillGradient(ui.Rect{X: x - band/2, Y: r.Y, W: band / 2, H: r.H}, ui.LinearGradient{From: glow.Alpha(0), To: glow, Angle: 90}, 0)
+			pt.FillGradient(ui.Rect{X: x, Y: r.Y, W: band / 2, H: r.H}, ui.LinearGradient{From: glow, To: glow.Alpha(0), Angle: 90}, 0)
+		})
+		pt.AnimationFrame()
+	})
 }
 
 // stat is a label and a value under a card's large number.
@@ -214,18 +236,32 @@ func tooltipAt(pt *ui.Painter, p palette, text string, x, y float32, r ui.Rect) 
 }
 
 // shareBar is a capsule split into the shares of a whole, each part in
-// its color, drawing itself from the left the first time it shows.
-func shareBar(c *ui.Context, p palette, colors []ui.Color, shares []float64) {
+// its color, drawing itself from the left the first time it shows. The
+// part under the pointer says what it is above the bar, the others fading
+// back.
+func shareBar(c *ui.Context, p palette, colors []ui.Color, shares []float64, names, values []string) {
 	total := 0.0
 	for _, s := range shares {
 		total += s
 	}
 	box := ui.Box(c).Height(12)
 	g := easeOutCubic(grow(box))
+	px, _, over := box.PointerPosition()
 	box.Draw(func(pt *ui.Painter, r ui.Rect) {
 		pt.Fill(r, p.well, r.H/2)
 		if total == 0 {
 			return
+		}
+		hot, hotX := -1, float32(0)
+		if over {
+			x := r.X
+			for i, s := range shares {
+				w := r.W * float32(s/total)
+				if r.X+px >= x && r.X+px < x+w {
+					hot, hotX = i, x+w/2
+				}
+				x += w
+			}
 		}
 		pt.Clip(ui.Rect{X: r.X, Y: r.Y, W: r.W * g, H: r.H}, r.H/2, func() {
 			x := r.X
@@ -234,78 +270,139 @@ func shareBar(c *ui.Context, p palette, colors []ui.Color, shares []float64) {
 				if w < 0.5 {
 					continue
 				}
+				col := colors[i%len(colors)]
+				if hot >= 0 && hot != i {
+					col = col.Alpha(0.4)
+				}
 				part := ui.Rect{X: x, Y: r.Y, W: max(w-2, 1), H: r.H}
-				pt.Fill(part, colors[i%len(colors)], 2)
+				pt.Fill(part, col, 2)
 				x += w
 			}
 		})
+		if hot >= 0 && hot < len(names) {
+			tooltipAt(pt, p, names[hot]+" · "+values[hot], hotX, r.Y-28, ui.Rect{X: r.X, Y: r.Y - 30, W: r.W, H: 30})
+		}
 	})
 }
 
-// donut is a ring of shares, with a text in its middle, sweeping round the
-// first time it shows.
-func donut(c *ui.Context, p palette, colors []ui.Color, shares []float64, value, label string) {
+// donutChart is a ring of shares, with the whole in its middle, sweeping
+// round the first time it shows, and the rows naming its parts beside it.
+// A part under the pointer, on the ring or in the rows, thickens as the
+// others fade, and the middle says what it is.
+func donutChart(c *ui.Context, p palette, colors []ui.Color, names, values []string, shares []float64, value, label string) {
 	total := 0.0
 	for _, s := range shares {
 		total += s
 	}
-	box := ui.Box(c).Size(120, 120).Shrink(0)
-	g := float64(easeOutCubic(grow(box)))
-	box.Draw(func(pt *ui.Painter, r ui.Rect) {
-		cx, cy := r.X+r.W/2, r.Y+r.H/2
-		radius := min(r.W, r.H)/2 - 9
-		const width = 13
-		ring := func(from, to float64, col ui.Color) {
-			if to <= from {
-				return
-			}
-			var path ui.Path
-			steps := max(2, int((to-from)*120))
-			for i := 0; i <= steps; i++ {
-				a := (from + (to-from)*float64(i)/float64(steps)) * 2 * math.Pi
-				x := cx + radius*float32(math.Sin(a))
-				y := cy - radius*float32(math.Cos(a))
-				if i == 0 {
-					path.MoveTo(x, y)
-				} else {
-					path.LineTo(x, y)
+	const size, width = float32(120), float32(13)
+	hot := -1
+	ui.Row(c).Gap(16).AlignItems(ui.Center).Padding(6, 0, 0).Children(func() {
+		box := ui.Box(c).Size(size, size).Shrink(0)
+		// The part under the pointer on the ring, by its angle.
+		if px, py, over := box.PointerPosition(); over && total > 0 {
+			dx, dy := px-size/2, py-size/2
+			d := float32(math.Hypot(float64(dx), float64(dy)))
+			radius := size/2 - 9
+			if d > radius-width && d < radius+width {
+				turn := math.Atan2(float64(dx), float64(-dy)) / (2 * math.Pi)
+				if turn < 0 {
+					turn++
+				}
+				at := 0.0
+				for i, s := range shares {
+					at += s / total
+					if turn < at {
+						hot = i
+						break
+					}
 				}
 			}
-			pt.StrokePath(&path, width, col)
 		}
-		ring(0, 1, p.well)
-		if total > 0 {
-			at := 0.0
-			for i, s := range shares {
-				part := s / total
-				if part > 0.004 {
-					gap := math.Min(0.007, part/4)
-					ring((at+gap)*g, math.Min(at+part-gap, g), colors[i%len(colors)])
+		ui.Column(c).Gap(3).Grow(1).MinWidth(0).Children(func() {
+			for i, name := range names {
+				r := ui.Row(c.Key(name)).Gap(8).AlignItems(ui.Center).Padding(3, 6).Margin(0, -6).Radius(6).Transition(quick)
+				if r.Hovered() {
+					hot = i
 				}
-				at += part
+				if hot == i {
+					r.Background(p.hover())
+				}
+				r.Children(func() {
+					dot := ui.Box(c).Size(8, 8).Radius(4).Background(colors[i%len(colors)]).Shrink(0)
+					pose := ui.Pose{}
+					if hot == i {
+						pose.Scale = 1.25
+					}
+					dot.AnimatePose(pose, ui.Snappy)
+					ui.Text(c, name).FontSize(13).TextColor(p.text).SingleLine().Grow(1).Shrink(1).MinWidth(0).Tooltip(name)
+					ui.Text(c, values[i]).FontSize(12).TextColor(p.muted).FontFeatures("tnum").SingleLine().Shrink(0)
+				})
 			}
+		})
+		g := float64(easeOutCubic(grow(box)))
+		focus := box.AnimateTo("focus", b2f(hot >= 0), ui.Animation{Duration: 160 * time.Millisecond})
+		lift := make([]float32, len(shares))
+		for i := range shares {
+			lift[i] = box.AnimateTo(i, b2f(hot == i), ui.Snappy)
 		}
-		big := ui.Span{Text: value, Size: 17, Weight: 700, Color: p.text}
-		bw, bh := pt.MeasureText(0, big)
-		small := ui.Span{Text: label, Size: 11, Color: p.muted}
-		sw, sh := pt.MeasureText(0, small)
-		y := cy - (bh+sh)/2
-		pt.RichText(cx-bw/2, y, 0, big)
-		pt.RichText(cx-sw/2, y+bh, 0, small)
+		mid, sub := value, label
+		if hot >= 0 {
+			mid, sub = values[hot], names[hot]
+		}
+		box.Draw(func(pt *ui.Painter, r ui.Rect) {
+			cx, cy := r.X+r.W/2, r.Y+r.H/2
+			radius := min(r.W, r.H)/2 - 9
+			ring := func(from, to float64, w float32, col ui.Color) {
+				if to <= from {
+					return
+				}
+				var path ui.Path
+				steps := max(2, int((to-from)*120))
+				for i := 0; i <= steps; i++ {
+					a := (from + (to-from)*float64(i)/float64(steps)) * 2 * math.Pi
+					x := cx + radius*float32(math.Sin(a))
+					y := cy - radius*float32(math.Cos(a))
+					if i == 0 {
+						path.MoveTo(x, y)
+					} else {
+						path.LineTo(x, y)
+					}
+				}
+				pt.StrokePath(&path, w, col)
+			}
+			ring(0, 1, width, p.well)
+			if total > 0 {
+				at := 0.0
+				for i, s := range shares {
+					part := s / total
+					if part > 0.004 {
+						gap := math.Min(0.007, part/4)
+						col := colors[i%len(colors)]
+						col = col.Alpha(1 - 0.6*focus*(1-lift[i]))
+						ring((at+gap)*g, math.Min(at+part-gap, g), width+5*lift[i], col)
+					}
+					at += part
+				}
+			}
+			big := ui.Span{Text: mid, Size: 17, Weight: 700, Color: p.text}
+			bw, bh := pt.MeasureText(0, big)
+			small := ui.Span{Text: sub, Size: 11, Color: p.muted}
+			sw, sh := pt.MeasureText(0, small)
+			// A long name keeps within the hole of the ring.
+			sw = min(sw, 2*(radius-width))
+			y := cy - (bh+sh)/2
+			pt.RichText(cx-bw/2, y, 0, big)
+			pt.RichText(cx-sw/2, y+bh, sw, small)
+		})
 	})
 }
 
-// legend is the rows naming the parts of a donut.
-func legend(c *ui.Context, p palette, colors []ui.Color, names, values []string) {
-	ui.Column(c).Gap(9).Grow(1).MinWidth(0).Children(func() {
-		for i, name := range names {
-			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				ui.Box(c).Size(8, 8).Radius(4).Background(colors[i%len(colors)]).Shrink(0)
-				ui.Text(c, name).FontSize(13).TextColor(p.text).SingleLine().Grow(1).Shrink(1).MinWidth(0).Tooltip(name)
-				ui.Text(c, values[i]).FontSize(12).TextColor(p.muted).FontFeatures("tnum").SingleLine().Shrink(0)
-			})
-		}
-	})
+// b2f is 1 for true and 0 for false, as a target to animate to.
+func b2f(b bool) float32 {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // tile is a part of a treemap.
@@ -323,7 +420,7 @@ func treemap(c *ui.Context, p palette, colors []ui.Color, tiles []tile, height f
 	g := grow(box)
 	px, py, over := box.PointerPosition()
 	box.Draw(func(pt *ui.Painter, root ui.Rect) {
-		at := 0
+		at, hotTile := 0, -1
 		var place func(ts []tile, r ui.Rect)
 		place = func(ts []tile, r ui.Rect) {
 			if len(ts) == 0 || r.W < 1 || r.H < 1 {
@@ -334,6 +431,9 @@ func treemap(c *ui.Context, p palette, colors []ui.Color, tiles []tile, height f
 				at++
 				x, y := root.X+px, root.Y+py
 				hot := over && x >= r.X && x < r.X+r.W && y >= r.Y && y < r.Y+r.H
+				if hot {
+					hotTile = i
+				}
 				drawTile(pt, p, colors[i%len(colors)], ts[0], r, easeOutCubic(stagger(g, i, len(tiles))), hot)
 				return
 			}
@@ -359,6 +459,12 @@ func treemap(c *ui.Context, p palette, colors []ui.Color, tiles []tile, height f
 			}
 		}
 		place(tiles, root)
+		// The tile under the pointer names itself, as a small one shows no
+		// label of its own.
+		if hotTile >= 0 {
+			t := tiles[hotTile]
+			tooltipAt(pt, p, t.name+" · "+t.value, root.X+px, max(root.Y+4, root.Y+py-30), root)
+		}
 	})
 }
 
@@ -374,6 +480,9 @@ func drawTile(pt *ui.Painter, p palette, color ui.Color, t tile, r ui.Rect, show
 		a += 0.1
 	}
 	pt.Fill(r, color.Alpha(a*shown), 10)
+	if hot {
+		pt.Stroke(r, color.Alpha(0.55*shown), 10, 1)
+	}
 	if r.W < 64 || r.H < 40 {
 		return
 	}
@@ -539,14 +648,21 @@ func (a *app) copyIconButton(c *ui.Context, p palette, key, label, text string) 
 	return b
 }
 
+// rowMotion is how a line of a list comes and goes: it grows in and
+// collapses, and those under it slide to their places.
+var rowMotion = ui.ElementTransition{Position: true, Duration: 220 * time.Millisecond, Ease: easeOutCubic,
+	Enter: &ui.Motion{Collapse: true}, Exit: &ui.Motion{Collapse: true}}
+
 // row is a line of a card's list: a title, a note under it and what goes
 // at its end.
 func row(c *ui.Context, p palette, title, note string, end func()) {
-	ui.Row(c).Gap(12).AlignItems(ui.Center).Padding(9, 0).Children(func() {
+	ui.Row(c).Gap(12).AlignItems(ui.Center).Padding(9, 0).Transition(rowMotion).Children(func() {
 		ui.Column(c).Gap(2).Grow(1).MinWidth(0).Children(func() {
 			ui.Text(c, title).FontSize(14).FontWeight(500).TextColor(p.text)
+			// A note that changes with the row, as a switch turned, fades
+			// across.
 			if note != "" {
-				ui.Text(c, note).FontSize(12).TextColor(p.muted).LineHeight(1.35)
+				ui.Text(c, note).FontSize(12).TextColor(p.muted).LineHeight(1.35).ContentTransition(ui.ContentTransition{})
 			}
 		})
 		if end != nil {
@@ -570,7 +686,7 @@ func switchRow(c *ui.Context, p palette, title, note string, on *bool, disabled 
 				}
 			}
 			if note != "" {
-				ui.Text(c, note).FontSize(12).TextColor(p.muted).LineHeight(1.35)
+				ui.Text(c, note).FontSize(12).TextColor(p.muted).LineHeight(1.35).ContentTransition(ui.ContentTransition{})
 			}
 		})
 		if ui.Switch(c.Key("switch"), on).Label(title).Disabled(disabled).Changed() {
@@ -596,7 +712,7 @@ func banner(c *ui.Context, p palette, icon *ui.SVG, color ui.Color, text string,
 // the window dims behind it. Escape or a click outside it closes it.
 func sheet(c *ui.Context, p palette, open *bool, fn func()) {
 	ui.DialogBase(c, open, func(backdrop, panel ui.Element) {
-		dim(backdrop, 0.38)
+		dim(backdrop, p, 0.38)
 		w, h := c.Size()
 		panel.Padding(24).Radius(18).Background(p.card).BorderWidth(1).BorderColor(p.border).
 			MaxWidth(w-48).MaxHeight(h-48).

@@ -145,9 +145,9 @@ func (a *app) overview(c *ui.Context, p palette) {
 			stats(c, p, stat{"projects", clean.Size(entryBytes(st.ByType, "projects"))},
 				stat{"file-history", clean.Size(entryBytes(st.ByType, "file-history"))},
 				stat{locales.Reclaimable(), reclaim})
-			names, shares, _ := topEntries(st.ByType, 5)
+			names, shares, values := topEntries(st.ByType, 5)
 			ui.Column(c).Gap(12).Padding(4, 0, 0).Children(func() {
-				shareBar(c, p, a.typeColors(p), shares)
+				shareBar(c, p, a.typeColors(p), shares, names, values)
 				ui.Row(c).Gap(14).Wrap().Children(func() {
 					for i, name := range names {
 						if i == 3 {
@@ -201,11 +201,8 @@ func (a *app) overview(c *ui.Context, p palette) {
 				return
 			}
 			names, shares, values := topEntries(st.ByType, 5)
-			ui.Row(c).Gap(16).AlignItems(ui.Center).Padding(6, 0, 0).Children(func() {
-				n, unit := splitNumber(clean.Size(st.Total))
-				donut(c, p, a.typeColors(p), shares, n+" "+unit, locales.InAll())
-				legend(c, p, a.typeColors(p), names, values)
-			})
+			n, unit := splitNumber(clean.Size(st.Total))
+			donutChart(c, p, a.typeColors(p), names, values, shares, n+" "+unit, locales.InAll())
 		})
 
 		// Storage by project.

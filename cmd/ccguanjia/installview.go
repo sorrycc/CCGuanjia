@@ -14,7 +14,8 @@ import (
 
 // installPage is how Claude Code is installed: the command that runs,
 // updating, reinstalling it or installing a chosen version its own way,
-// the other installs, and the native installer's older versions.
+// and the other installs at the left, and the native installer's older
+// versions at the right, so that the columns come out about as long.
 func (a *app) installPage(c *ui.Context, p palette) {
 	if a.inst == nil {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
@@ -82,24 +83,6 @@ func (a *app) installPage(c *ui.Context, p palette) {
 				}
 				ui.Text(c, locales.OfficialCommands()).FontSize(12).TextColor(p.faint).LineHeight(1.35)
 			})
-			if a.instBusy != "" || len(a.instLog) > 0 || a.instErr != "" {
-				card(c, p, iconTerminal, p.gray, locales.Output(), "", nil, func() {
-					mono(c, p, "$ "+firstNonEmpty(a.instBusy, a.instDone))
-					ui.Scroll(c.Key("log")).MaxHeight(240).Padding(10, 12).Radius(10).Background(p.well).Children(func() {
-						for i, l := range a.instLog {
-							ui.Text(c.Key(i), l).Font("monospace").FontSize(12).TextColor(p.text).Selectable()
-						}
-					})
-					switch {
-					case a.instErr != "":
-						ui.Text(c, a.instErr).FontSize(13).TextColor(p.red)
-					case a.instDone != "" && a.instBusy == "":
-						ui.Text(c, locales.CommandDone()).FontSize(13).TextColor(p.green)
-					}
-				})
-			}
-		})
-		ui.Column(c).Gap(20).MinWidth(0).Children(func() {
 			card(c, p, iconFolder, p.blue, locales.OnPath(), locales.InstallsCount(len(a.inst.Installs)), nil, func() {
 				if len(a.inst.Installs) == 0 {
 					ui.Text(c, locales.NoneFound()).FontSize(13).TextColor(p.muted)
@@ -119,6 +102,24 @@ func (a *app) installPage(c *ui.Context, p palette) {
 					}
 				})
 			})
+			if a.instBusy != "" || len(a.instLog) > 0 || a.instErr != "" {
+				card(c, p, iconTerminal, p.gray, locales.Output(), "", nil, func() {
+					mono(c, p, "$ "+firstNonEmpty(a.instBusy, a.instDone))
+					ui.Scroll(c.Key("log")).MaxHeight(240).Padding(10, 12).Radius(10).Background(p.well).Children(func() {
+						for i, l := range a.instLog {
+							ui.Text(c.Key(i), l).Font("monospace").FontSize(12).TextColor(p.text).Selectable()
+						}
+					})
+					switch {
+					case a.instErr != "":
+						ui.Text(c, a.instErr).FontSize(13).TextColor(p.red)
+					case a.instDone != "" && a.instBusy == "":
+						ui.Text(c, locales.CommandDone()).FontSize(13).TextColor(p.green)
+					}
+				})
+			}
+		})
+		ui.Column(c).Gap(20).MinWidth(0).Children(func() {
 			a.versionsCard(c, p)
 		})
 	})
@@ -201,9 +202,13 @@ func (a *app) versionList(c *ui.Context, p palette, in *install.Install, want st
 	}
 	ui.Scroll(c.Key("ver-list")).MaxHeight(200).Padding(4).Radius(10).Background(p.well).Children(func() {
 		for _, v := range a.verList {
-			r := ui.Row(c.Key(v)).Gap(8).Padding(6, 10).Radius(8).AlignItems(ui.Center).Cursor(ui.CursorPointer)
-			if v == want {
+			r := ui.Row(c.Key(v)).Gap(8).Padding(6, 10).Radius(8).AlignItems(ui.Center).Cursor(ui.CursorPointer).
+				Label(v).Transition(quick)
+			switch {
+			case v == want:
 				r.Background(p.tint(p.blue))
+			case r.Hovered():
+				r.Background(p.hover())
 			}
 			r.OnClick(func() { a.chooseVersion(v) }).Children(func() {
 				ui.Text(c, v).Font("monospace").FontSize(13).TextColor(p.text).Grow(1)

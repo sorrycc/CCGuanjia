@@ -70,7 +70,12 @@ func (a *app) itemsCard(c *ui.Context, p palette, pl *clean.Plan) {
 				}
 				ui.Row(c.Key("item-"+it.Rel)).Gap(12).AlignItems(ui.Center).Padding(9, 0).Children(func() {
 					ui.Checkbox(c.Key("ck"), &it.Selected, "").Label(it.Rel)
-					ui.Column(c).Gap(2).Grow(1).MinWidth(0).Children(func() {
+					// An item left out fades back, so that what goes stands out.
+					kept := ui.Pose{}
+					if !it.Selected {
+						kept.Fade = 0.45
+					}
+					ui.Column(c.Key("what")).Gap(2).Grow(1).MinWidth(0).AnimatePose(kept, ui.Snappy).Children(func() {
 						ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 							ui.Text(c, it.Rel).Font("monospace").FontSize(13).TextColor(p.text).SingleLine()
 							if it.Kind == clean.Archive {
@@ -79,7 +84,7 @@ func (a *app) itemsCard(c *ui.Context, p palette, pl *clean.Plan) {
 						})
 						ui.Text(c, note).FontSize(12).TextColor(p.muted).LineHeight(1.35)
 					})
-					ui.Text(c, clean.Size(it.Bytes)).FontSize(13).TextColor(p.muted).FontFeatures("tnum").Shrink(0)
+					ui.Text(c.Key("size"), clean.Size(it.Bytes)).FontSize(13).TextColor(p.muted).FontFeatures("tnum").Shrink(0).AnimatePose(kept, ui.Snappy)
 				})
 			}
 		})

@@ -41,8 +41,12 @@ func (s *stage) enter(e ui.Element) {
 }
 
 // dim fades a dialog's backdrop in to a shade of a, the first time it is
-// built.
-func dim(backdrop ui.Element, a float32) {
+// built. The light appearance dims less, so that the window behind stays
+// clear rather than going gray.
+func dim(backdrop ui.Element, p palette, a float32) {
+	if !p.dark {
+		a *= 0.6
+	}
 	tl := backdrop.Timeline("dim", ui.TimelineOptions{})
 	t := tl.Tween(ui.Tween{From: 0, To: 1, Duration: 200 * time.Millisecond, Ease: easeOutCubic})
 	backdrop.Background(ui.RGBA(0, 0, 0, a*t))
@@ -69,6 +73,10 @@ func grow(e ui.Element) float32 {
 func easeOutCubic(t float32) float32 {
 	u := 1 - t
 	return 1 - u*u*u
+}
+
+func easeInOutSine(t float32) float32 {
+	return float32(0.5 - 0.5*math.Cos(float64(t)*math.Pi))
 }
 
 func easeOutQuint(t float32) float32 {

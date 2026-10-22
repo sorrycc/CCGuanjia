@@ -62,6 +62,23 @@ needs a `## <version>` section here, or its build fails.
   opens a page presses in as it is clicked.
 - Overview with all profiles sums their storage once per measurement
   rather than on every frame.
+- Storage by Type answers the pointer: a part of the ring, or its row in
+  the list beside it, thickens as the others fade, and the middle of the
+  ring shows its name and size. The tiles of Storage by Project and the
+  parts of Storage's bar name themselves under the pointer, so that a
+  tile too small for a label can still be read.
+- What is still being read shows a soft light sweeping across its
+  blocks, one wave over the page, drawn without building the window
+  again.
+- Install puts the installs on the PATH under Claude Code, so that its
+  two columns come out about as long.
+- Cleanup fades an item whose box is cleared, so that what goes stands
+  out, and lines of a list, as a native version removed, collapse rather
+  than vanish.
+- In the light appearance dialogs and the command palette dim the window
+  less, so that it stays clear behind them. The versions of Install
+  Version light up under the pointer, and a note that changes with its
+  switch fades across.
 
 ## 0.1.0
 

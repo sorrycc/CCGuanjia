@@ -192,7 +192,7 @@ func (a *app) palette(c *ui.Context, p palette) {
 		}
 	}
 	ui.DialogBase(c, &a.paletteOpen, func(backdrop, panel ui.Element) {
-		dim(backdrop, 0.3)
+		dim(backdrop, p, 0.3)
 		backdrop.Justify(ui.Start).Padding(110, 0, 0)
 		panel.Width(580).Radius(16).Background(p.card).BorderWidth(1).BorderColor(p.border).
 			Shadow(0, 2, 6, 0, ui.RGBA(0, 0, 0, 0.12)).Shadow(0, 30, 70, -12, ui.RGBA(0, 0, 0, 0.45)).
