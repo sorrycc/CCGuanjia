@@ -3,7 +3,7 @@
 The update window shows the section of the version it offers. Every release
 needs a `## <version>` section here, or its build fails.
 
-## Unreleased
+## 0.1.1
 
 - Claude Settings (⌘4): edit each profile's `settings.json` in a form,
   with the model, effort, permission rules and mode, environment
